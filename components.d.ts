@@ -14,6 +14,7 @@ declare module 'vue' {
     EchartsVisualization: typeof import('./src/components/EchartsVisualization.vue')['default']
     Fork: typeof import('./src/components/icons/Fork.vue')['default']
     Graph: typeof import('./src/components/icons/Graph.vue')['default']
+    HoverClickItem: typeof import('./src/components/HoverClickItem.vue')['default']
     KnowledgeGraph: typeof import('./src/components/KnowledgeGraph.vue')['default']
     QA: typeof import('./src/components/icons/QA.vue')['default']
     RouterLink: typeof import('vue-router')['RouterLink']

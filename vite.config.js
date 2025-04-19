@@ -12,15 +12,15 @@ export default defineConfig({
     Components({
       dts: true, // 生成类型声明文件
       dirs: ['src/components'], // 自动导入的组件目录
-      // 可以配置 UI 库的解析器，如 Element Plus, Ant Design Vue 等
-      resolvers: [
-        // 例如 Element Plus
-        (name) => {
-          if (name.startsWith('El')) {
-            return { importName: name.slice(2), path: 'element-plus' }
-          }
-        },
-      ],
+      // // 可以配置 UI 库的解析器，如 Element Plus, Ant Design Vue 等
+      // resolvers: [
+      //   // 例如 Element Plus
+      //   (name) => {
+      //     if (name.startsWith('El')) {
+      //       return { importName: name.slice(2), path: 'element-plus' }
+      //     }
+      //   },
+      // ],
     }),
     AutoImport({
       imports: ['vue', 'vue-router', 'pinia'],

@@ -1,5 +1,6 @@
 <template>
-  <svg xmlns="http://www.w3.org/2000/svg" :width="size" :height="size" viewBox="0 0 14 14" :fill="color">
+  <svg :style="{ cursor: 'pointer' }" xmlns="http://www.w3.org/2000/svg" :width="size" :height="size" viewBox="0 0 14 14"
+    :fill="color">
     <path :d="pathData" :fill-rule="fillRule" />
   </svg>
 </template>
