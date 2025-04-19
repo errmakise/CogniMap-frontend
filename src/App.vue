@@ -4,10 +4,12 @@ import '@/assets/styles/reset.css'
 import '@/assets/styles/variables.css'
 import '@/assets/styles/global.css'
 
+import Sidebar from './components/Sidebar.vue'
 </script>
 
 <template>
   <div class="app-container">
+    <Sidebar />
     <RouterView />
   </div>
 
