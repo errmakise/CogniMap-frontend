@@ -1,29 +1,17 @@
 <template>
   <div class="bar-container">
     <div class="function-list">
-      <HoverClickItem
-        :activeKey="activeItem"
-        itemKey="account"
-        @click="clickFunction"
-      >
+      <HoverClickItem :activeKey="activeItem" itemKey="account" @clickItem="clickFunction">
         <Account />
         <div class="function-name">账号</div>
       </HoverClickItem>
 
-      <HoverClickItem
-        :activeKey="activeItem"
-        itemKey="qa"
-        @click="clickFunction"
-      >
+      <HoverClickItem :activeKey="activeItem" itemKey="qa" @clickItem="clickFunction">
         <QA />
         <div class="function-name">问答</div>
       </HoverClickItem>
 
-      <HoverClickItem
-        :activeKey="activeItem"
-        itemKey="graph"
-        @click="clickFunction"
-      >
+      <HoverClickItem :activeKey="activeItem" itemKey="graph" @clickItem="clickFunction">
         <Graph />
         <div class="function-name">图谱</div>
       </HoverClickItem>
@@ -34,33 +22,55 @@
       <Fork @click="clickListFork()" />
     </div>
 
-    <div class="files-list">
-      <div class="files">
-        <HoverClickItem
-          v-for="(file, index) in historyFiles"
-          :key="index"
-          :activeKey="activeFile"
-          :itemKey="file"
-          @click="openFile"
-        >
-          {{ file }}
+    <el-scrollbar class="scrollbar">
+      <div class="files-list">
+        <HoverClickItem v-for="(file, index) in historyFiles" :key="index" :activeKey="activeItem" :itemKey="file.id"
+          @clickItem="openFile" :isFile="true" @clickFork="closeFile">
+          <!-- 根据 fileType 动态渲染图标 -->
+          <component :is="getFileIcon(file.fileType).component" :size="24" />
+          <div class="file-name"> {{ file.name }}</div>
         </HoverClickItem>
       </div>
-    </div>
+
+
+    </el-scrollbar>
   </div>
 </template>
 
 <script setup>
 import { ref } from 'vue';
 import HoverClickItem from './HoverClickItem.vue';
+import GraphFile from './icons/GraphFile.vue';
+import MdFile from './icons/MdFile.vue';
+import Folder from './icons/Folder.vue';
 
 const historyFiles = ref([
-  'example1.txt',
-  'example2.json',
-  'example3.csv'
+  { name: 'example1.txt', id: 1, fileType: 'md' },
+  { name: 'example2.json', id: 2, fileType: 'graph' },
+  { name: 'example3.csv', id: 3, fileType: 'folder' },
+  { name: 'example1.txt', id: 1, fileType: 'md' },
+  { name: 'example2.json', id: 2, fileType: 'graph' },
+  { name: 'example3.csv', id: 3, fileType: 'folder' },
+  { name: 'example1.txt', id: 1, fileType: 'md' },
+  { name: 'example2.json', id: 2, fileType: 'graph' },
+  { name: 'example3.csv', id: 3, fileType: 'folder' },
+  { name: 'example1.txt', id: 1, fileType: 'md' },
+  { name: 'example2.json', id: 2, fileType: 'graph' },
+  { name: 'example3.csv', id: 3, fileType: 'folder' },
+  { name: 'example1.txt', id: 1, fileType: 'md' },
+  { name: 'example2.json', id: 2, fileType: 'graph' },
+  { name: 'example3.csv', id: 3, fileType: 'folder' },
+  { name: 'example1.txt', id: 1, fileType: 'md' },
+  { name: 'example2.json', id: 2, fileType: 'graph' },
+  { name: 'example3.csv', id: 3, fileType: 'folder' },
 ]);
 
+const closeFile = (fileId) => {
+  console.log('关闭文件:id:', fileId);
+};
+
 const openFile = (fileId) => {
+  activeItem.value = fileId;
   console.log('打开文件:id:', fileId);
 };
 
@@ -88,13 +98,45 @@ const clickFunction = (itemName) => {
       break;
   }
 };
+
+// 根据 fileType 返回对应的图标组件
+const fileIconConfig = {
+  md: {
+    component: MdFile,
+    color: '#FF0000', // 红色
+    size: 24
+  },
+  graph: {
+    component: GraphFile,
+    color: '#00FF00', // 绿色
+    size: 24
+  },
+  folder: {
+    component: Folder,
+    color: '#0000FF', // 蓝色
+    size: 24
+  }
+};
+const getFileIcon = (fileType) => {
+  return fileIconConfig[fileType] || MdFile;
+};
+
 </script>
 
 <style scoped>
+.files-list {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
 .connector-line {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  margin-bottom: 5px;
+  margin-top: 5px;
+
 }
 
 .line {
@@ -107,13 +149,18 @@ const clickFunction = (itemName) => {
   display: flex;
   flex-direction: column;
   gap: 10px;
+
+
 }
 
 .bar-container {
   background-color: transparent;
-  width: 200px;
+  width: 250px;
   height: 100%;
-  padding: 10px 15px 5px 15px;
+  padding: 15px 15px 10px 20px;
+  display: flex;
+  flex-direction: column;
+
 }
 
 .function-name {
@@ -123,5 +170,16 @@ const clickFunction = (itemName) => {
 
 .hover-click-item.active .function-name {
   font-weight: 600;
+}
+
+.file-name {
+  width: 120px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.scrollbar {
+  padding-right: 12px;
 }
 </style>
