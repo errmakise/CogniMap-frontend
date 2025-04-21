@@ -10,7 +10,9 @@ import Sidebar from './components/Sidebar.vue'
 <template>
   <div class="app-container">
     <Sidebar />
-    <RouterView />
+    <div class="body">
+      <RouterView />
+    </div>
   </div>
 
 </template>
@@ -23,9 +25,14 @@ import Sidebar from './components/Sidebar.vue'
   padding: 0;
   /* 其他布局样式 */
   background-color: #F0F4F7;
+  display: flex;
 }
 
 .body {
-  padding: 0;
+  border-radius: 20px;
+  background-color: white;
+  flex-grow: 1;
+  margin: 15px 10px 10px 0px;
+
 }
 </style>

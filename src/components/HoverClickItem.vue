@@ -84,8 +84,6 @@ const handleClickFork = () => {
   display: flex;
   align-items: center;
   justify-content: center;
-  /* 给图标添加左边距 */
-  /* 可以根据需要添加更多样式，如动画、颜色等 */
 }
 
 .fork-icon:hover {
