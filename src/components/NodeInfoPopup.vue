@@ -1,24 +1,34 @@
 <template>
 
-  <div class="popup-content" v-if="isVisible">
+  <div :style="{
+    position: 'absolute',
+    width: '350px',
+    left: (props.position && props.position[0] || 0) + 'px',
+    top: (props.position && props.position[1] || 0) + 'px',
+    background: 'white',
+    padding: '25px',
+    border: '1px solid #ccc',
+    borderRadius: '15px',
+    boxShadow: '0 2px 10px rgba(0, 0, 0, 0.2)'
+  }">
     <div class="line">
       <h3>{{ nodeInfo.name }}</h3>
-      <Edit />
+      <Edit @click="clickEdit" " />
     </div>
 
-    <div class="line">
-      <div class="node-time">
-        创建于： {{ nodeInfo.createTime }}
-      </div>
-      <div class="node-time">
-        修改于： {{ nodeInfo.updateTime }}
-      </div>
+    <div class=" line">
+        <div class="node-time">
+          创建于： {{ nodeInfo.createTime }}
+        </div>
+        <div class="node-time">
+          修改于： {{ nodeInfo.updateTime }}
+        </div>
     </div>
 
     <div class="line main-font">{{ nodeInfo.description }}</div>
 
     <div class="file-list">
-      <div class="file-item" @click="clickFile()" v-for="(file, index) in nodeInfo.files" :key="file.fileId">
+      <div class="file-item" @click="clickFile(file.fileId)" v-for="(file, index) in nodeInfo.files" :key="file.fileId">
         <span class="main-font file-name">{{ file.name }}</span>
         <RightArrow />
       </div>
@@ -30,6 +40,14 @@
 
 <script setup>
 import { ref, defineProps, defineEmits } from 'vue';
+const emit = defineEmits(['clickFile', 'clickEdit'])
+
+const clickFile = (fileId) => {
+  emit('clickFile', fileId)
+}
+const clickEdit = () => {
+  emit('clickEdit')
+}
 
 const props = defineProps({
   nodeInfo: {
@@ -48,24 +66,17 @@ const props = defineProps({
   },
   position: {
     type: Array,
-    required: true
+    default: () => [0, 0]
   }
 });
 
-const emits = defineEmits(['close']);
-
 const isVisible = ref(true);
 
-const closePopup = () => {
-  emits('close');
-};
+
 </script>
 
 <style scoped>
 .popup-content {
-  position: fixed;
-  left: 0;
-  top: 0;
   width: 350px;
   background-color: white;
   padding: 25px;
@@ -94,6 +105,7 @@ const closePopup = () => {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  cursor: pointer;
 }
 
 .file-list {
