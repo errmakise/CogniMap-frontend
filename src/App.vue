@@ -30,7 +30,7 @@ import Sidebar from './components/Sidebar.vue'
 
 .body {
   border-radius: 20px;
-  background-color: white;
+  background-color: #FFFFFF;
   flex-grow: 1;
   margin: 15px 10px 10px 0px;
 

@@ -13,16 +13,16 @@
   }">
     <div class="line">
       <h3>{{ nodeInfo.name }}</h3>
-      <Edit @click="clickEdit" " />
+      <Edit @click="clickEdit" />
     </div>
 
     <div class=" line">
-        <div class="node-time">
-          创建于： {{ nodeInfo.createTime }}
-        </div>
-        <div class="node-time">
-          修改于： {{ nodeInfo.updateTime }}
-        </div>
+      <div class="node-time">
+        创建于： {{ nodeInfo.createTime }}
+      </div>
+      <div class="node-time">
+        修改于： {{ nodeInfo.updateTime }}
+      </div>
     </div>
 
     <div class="line main-font">{{ nodeInfo.description }}</div>

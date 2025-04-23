@@ -1,14 +1,16 @@
 <template>
   <div class="graph-edit-container">
+
     <!-- vue-echarts 图表 -->
     <v-chart :option="chatOptions" ref="chartRef" />
     <NodeInfoPopup v-if="isPopupVisible" :nodeInfo="selectedNodeInfo" :position="popupPosition"
       @clickFile="handleClickFile" @clickEdit="handleClickEdit" />
+
+    <GraphBottom class="bottom" v-model="sliderValue" @change="handleZoomChange" />
   </div>
 </template>
 
 <script setup>
-import * as echarts from 'echarts';
 
 // 定义图表配置
 const chatOptions = ref({
@@ -27,6 +29,13 @@ const chatOptions = ref({
     }
   },
   animationDuration: 1500,
+  dataZoom: [
+    {
+      type: 'inside', // 启用鼠标滚轮缩放
+      zoomOnMouseWheel: true, // 允许鼠标滚轮缩放
+      moveOnMouseMove: true, // 允许鼠标移动平移
+    }
+  ],
   series: [
     {
       name: '知识图谱',
@@ -48,6 +57,8 @@ const chatOptions = ref({
         { source: '1', target: '2' },
       ],
       roam: true,
+      zoom: 1,
+      scaleLimit: { min: 0.1, max: 5 },
       label: {
         show: true,
         position: 'top',
@@ -79,64 +90,75 @@ const selectedNodeInfo = ref({
 // 弹窗位置
 const popupPosition = ref([0, 0]);
 
+const findNearestNode = (chart, point, threshold = 20) => {
+  const series = chart.getModel().getSeries()[0];
+  let minDist = Infinity, nearestNode = null;
+
+  series.getData().each((idx) => {
+    const nodePos = series.getData().getItemLayout(idx);
+
+    const dist = Math.sqrt(Math.pow(nodePos[0] - point[0], 2) +
+      Math.pow(nodePos[1] - point[1], 2));
+
+    if (dist < threshold && dist < minDist) {
+      minDist = dist;
+      nearestNode = series.getData().getRawDataItem(idx);
+    }
+  });
+  return nearestNode;
+}
+const sliderValue = ref(100); // 初始值 100% (1x)
+
+
 onMounted(() => {
-  // 可以在这里进行更多的初始化操作，例如监听图表事件
   const chart = chartRef.value?.chart;
   if (chart) {
+
     // 监听拖拽事件
-    chart.on('graphRoam', () => {
-      closePopup();
+    chart.on('graphRoam', (params) => {
+      if (isPopupVisible.value === true) {
+        closePopup();
+      }
+      console.log('拖拽事件', params);
+      const zoom = chart.getOption().series[0].zoom || 1;
+      sliderValue.value = zoom * 100;
     });
 
-    // 监听缩放事件
-    chart.on('dataZoom', () => {
-      closePopup();
-    });
 
     chart.getZr().on('click', (params) => {
       closePopup();
       console.log('点击事件', params);
 
-      // 获取点击的图形元素
-      const target = params.target;
-      const element = target.__ec_inner_0;
-
       const point = chart.convertFromPixel({ seriesIndex: 0 }, [params.offsetX, params.offsetY]);
-      const nodeIndex = findNearestNodeIndex(chart, point); // 自定义查找函数
+      let nodeData = findNearestNode(chart, point);
+      console.log('nodeData', nodeData);
 
-      console.log('nodeIndex', nodeIndex);
-      // 判断是否点击了节点
-      if (target && element
-        && element.dataType === 'node') {
-
-        // 查找点击的节点
-        const series = chart.getModel().getSeries()[0];//本项目是力导向图，只有一个series
-        const data = series.getData();
-        console.log('series', series);
-        console.log('data', data);
-
-        let nodeData = data.getRawDataItem(element.dataIndex);
-
-
-        if (nodeData) {
-          showNodePopup(nodeData, params);
-          console.log('点击了节点:', nodeData.name);
-        }
-
-        //要不要加个点击在节点附近，然后显示节点信息的功能？
+      if (nodeData) {
+        showNodePopup(nodeData, params);
+        console.log('点击了节点:', nodeData.name);
       }
     });
   }
 });
 
+const handleZoomChange = (zoom) => {
+  console.log('缩放事件', zoom);
+  const chart = chartRef.value?.chart;
+  chart.setOption({ series: [{ zoom: zoom }] });
+
+
+};
+
 // 显示节点信息弹窗
 const showNodePopup = (nodeData, eventParams) => {
   const chart = chartRef.value?.chart;
+
   if (chart) {
     selectedNodeInfo.value = {
       name: nodeData.name,
       createTime: '2025.1.1',
       updateTime: '2025.1.1',
+
       description: '描述内容',
       files: [
         { name: '文件名1', fileId: '1' },
@@ -151,6 +173,8 @@ const showNodePopup = (nodeData, eventParams) => {
       eventParams.offsetY + containerPos.top + 10
     ];
 
+    console.log('popupPosition', popupPosition.value);
+    console.log('eventParams', eventParams);
     isPopupVisible.value = true;
   }
 
@@ -166,6 +190,7 @@ const handleClickEdit = () => {
 };
 
 const closePopup = () => {
+  console.log('关闭弹窗');
   isPopupVisible.value = false;
 };
 </script>
@@ -174,5 +199,13 @@ const closePopup = () => {
 .graph-edit-container {
   width: 100%;
   height: 100%;
+  position: relative;
+}
+
+.bottom {
+  position: absolute;
+  bottom: 30px;
+  left: 50%;
+  transform: translateX(-50%);
 }
 </style>
