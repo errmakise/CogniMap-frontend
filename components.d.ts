@@ -11,6 +11,7 @@ declare module 'vue' {
     2: typeof import('./src/components/icons/QA.vue')['default']
     3: typeof import('./src/components/icons/Fork copy 3.vue')['default']
     Account: typeof import('./src/components/icons/Account.vue')['default']
+    AddNodePopup: typeof import('./src/components/AddNodePopup.vue')['default']
     AddRound: typeof import('./src/components/icons/AddRound.vue')['default']
     Cancle: typeof import('./src/components/icons/Cancle.vue')['default']
     Connect: typeof import('./src/components/icons/Connect.vue')['default']

@@ -1,11 +1,11 @@
 <template>
   <div class="function-container">
-    <download size="35" @click="emitClick('download')" />
-    <Search size="35" @click="emitClick('search')" />
-    <AddRound size="35" @click="emitClick('add')" />
-    <DeleteRound size="35" @click="emitClick('delete')" />
-    <Connect size="35" @click="emitClick('connect')" />
-    <cancle size="35" @click="emitClick('cancel')" />
+    <download size="35" @click="emitClick('download')" class="clickable-icon"/>
+    <Search size="35" @click="emitClick('search')" class="clickable-icon"/>
+    <AddRound size="35" @click="emitClick('add')" class="clickable-icon"/>
+    <DeleteRound size="35" @click="emitClick('delete')" class="clickable-icon"/>
+    <Connect size="35" @click="emitClick('connect')" class="clickable-icon" />
+    <cancle size="35" @click="emitClick('cancel')" class="clickable-icon"/>
     <div class="zoom-control">
       <input type="range" :min="min" :max="max" :step="step" :value="modelValue" @input="handleInput">
       <span>缩放: {{ currentZoom }}x</span>
@@ -38,6 +38,10 @@ const emitClick = (iconName) => {
 </script>
 
 <style scoped>
+.clickable-icon {
+  cursor: pointer;
+  transition: transform 0.3s ease;
+}
 .function-container {
   width: 52%;
   background-color: #F6F7F8;

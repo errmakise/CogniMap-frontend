@@ -31,10 +31,32 @@
           <div class="file-name"> {{ file.name }}</div>
         </HoverClickItem>
       </div>
-
-
     </el-scrollbar>
+
+    <div class="line" style="width: 100%;margin: 6px 0px;"></div>
+    <HoverClickItem :activeKey="downloadDialogVisible" :itemKey="downloadFiles" @clickItem="openFilesList">
+      <Download />
+      <div class="function-name recent-file">最近文件</div>
+    </HoverClickItem>
   </div>
+
+  <!-- 添加下载记录对话框 -->
+  <el-dialog v-model="downloadDialogVisible" title="下载记录" width="50%">
+    <el-scrollbar height="400px">
+      <div v-for="(record, index) in downloadHistoryStore.history" :key="index" class="download-item"
+        @click="openDownloadedFile(record.path)">
+        <div class="file-info">
+          <span class="name">{{ record.name }}</span>
+          <span class="path">{{ record.path }}</span>
+          <span class="time">{{ record.time }}</span>
+        </div>
+        <el-icon class="delete-icon" @click.stop="deleteDownloadRecord(index)">
+          <Delete />
+        </el-icon>
+      </div>
+    </el-scrollbar>
+  </el-dialog>
+
 </template>
 
 <script setup>
@@ -43,6 +65,35 @@ import HoverClickItem from './HoverClickItem.vue';
 import GraphFile from './icons/GraphFile.vue';
 import MdFile from './icons/MdFile.vue';
 import Folder from './icons/Folder.vue';
+import { useDownloadHistoryStore } from '@/stores/downloadHistory'
+import { Delete } from '@element-plus/icons-vue'
+import { ipcRenderer } from 'electron'
+import path from 'path'
+
+const downloadHistoryStore = useDownloadHistoryStore()
+const downloadDialogVisible = ref(false);
+
+const openDownloadedFile = async (filePath) => {
+  try {
+    // 修改为打开文件所在目录
+    await ipcRenderer.invoke('open-folder', path.dirname(filePath))
+  } catch (error) {
+    console.error('打开文件夹失败:', error)
+  }
+}
+
+const deleteDownloadRecord = (index) => {
+  downloadHistoryStore.history.splice(index, 1)
+}
+
+const openFilesList = () => {
+  downloadDialogVisible.value = !downloadDialogVisible.value;
+  console.log('打开文件列表');
+};
+
+const handleClose = (done) => {
+  done();
+};
 
 const historyFiles = ref([
   { name: 'example1.txt', id: 1, fileType: 'md' },
@@ -124,6 +175,37 @@ const getFileIcon = (fileType) => {
 </script>
 
 <style scoped>
+.download-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px;
+  padding-right: 20px;
+  border-bottom: 1px solid #eee;
+}
+
+.file-info {
+  display: flex;
+  flex-direction: column;
+  cursor: pointer;
+  gap: 5px;
+}
+
+.name{
+  font-weight: 600;
+  font-size: 16px;
+}
+
+.time {
+  font-size: 12px;
+  color: #999;
+}
+
+.recent-file {
+  padding: 10px 5px;
+  margin-bottom: 5px;
+}
+
 .files-list {
   display: flex;
   flex-direction: column;

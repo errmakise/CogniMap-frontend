@@ -5,22 +5,19 @@ import vue from '@vitejs/plugin-vue'
 import vueDevTools from 'vite-plugin-vue-devtools'
 import AutoImport from 'unplugin-auto-import/vite'
 import Components from 'unplugin-vue-components/vite'
+import electron from 'vite-plugin-electron'
+import electron_render from "vite-plugin-electron-renderer";
 
 export default defineConfig({
   // Vite 插件
   plugins: [
+    electron({
+      entry: 'electron/main.js', // 主进程文件
+    }),
+    electron_render(),
     Components({
       dts: true, // 生成类型声明文件
       dirs: ['src/components'], // 自动导入的组件目录
-      // // 可以配置 UI 库的解析器，如 Element Plus, Ant Design Vue 等
-      // resolvers: [
-      //   // 例如 Element Plus
-      //   (name) => {
-      //     if (name.startsWith('El')) {
-      //       return { importName: name.slice(2), path: 'element-plus' }
-      //     }
-      //   },
-      // ],
     }),
     AutoImport({
       imports: ['vue', 'vue-router', 'pinia'],
@@ -31,10 +28,21 @@ export default defineConfig({
     }),
     vue(),
     vueDevTools(),
+    electron_render(),
   ],
+  server: {
+    port: 8888,
+    cors: true, // 允许跨域
+    hmr: true, // 开启热更新
+  },
   resolve: {
     alias: {
       '@': fileURLToPath(new URL('./src', import.meta.url)),
+    },
+  },
+  build: {
+    rollupOptions: {
+      external: ['electron'],
     },
   },
 })
