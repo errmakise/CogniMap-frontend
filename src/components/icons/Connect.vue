@@ -1,13 +1,15 @@
 <template>
-  <svg xmlns="http://www.w3.org/2000/svg" :width="size" :height="size" viewBox="0 0 40 40" :fill="color">
+  <svg xmlns="http://www.w3.org/2000/svg" :width="size" :height="size" viewBox="0 0 40 40" :fill="disable ? disableColor : color" :class="['clickable-icon', { disabled: disable }]">
     <path :d="pathData" :fill-rule="fillRule" />
   </svg>
 </template>
 
 <script setup>
+const disableColor = '#C4C4C4'
 defineProps({
+  disable: { type: Boolean, default: false },
   size: { type: [String, Number], default: 40 },
-  color: { type: String, default: '#C4C4C4' },
+  color: { type: String, default: '#09244B' },
   fillRule: { type: String, default: 'evenodd' },
   pathData: {
     type: String,
@@ -15,3 +17,19 @@ defineProps({
   }
 })
 </script>
+
+<style scoped>
+.clickable-icon {
+  cursor: pointer;
+  transition: transform 0.1s ease;
+  margin: 0 8px;
+
+  &:hover {
+    transform: scale(1.2);
+  }
+
+  &.disabled {
+    cursor: not-allowed;
+  }
+}
+</style>

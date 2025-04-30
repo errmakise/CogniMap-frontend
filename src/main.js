@@ -24,3 +24,4 @@ app.component('v-chart', ECharts)
 app.provide('echarts', echarts)
 
 app.mount('#app')
+
