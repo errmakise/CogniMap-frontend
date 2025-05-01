@@ -22,7 +22,6 @@ defineProps({
 .clickable-icon {
   cursor: pointer;
   transition: transform 0.1s ease;
-  margin: 0 8px;
 
   &:hover {
     transform: scale(1.2);

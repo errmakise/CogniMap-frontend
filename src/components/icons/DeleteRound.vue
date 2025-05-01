@@ -25,7 +25,7 @@ const disableColor = '#C4C4C4'
 .clickable-icon {
   cursor: pointer;
   transition: transform 0.1s ease;
-  margin: 0 8px;
+
   /* 增加图标间距 */
 
   &:hover {

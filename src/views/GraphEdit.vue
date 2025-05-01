@@ -7,8 +7,8 @@
       @clickFile="handleClickFile" @clickEdit="handleClickEdit" />
     <!-- :loading="selectedNodeInfo.loading" -->
 
-    <GraphBottom class="bottom" v-model="sliderValue" :disable-delete="!hasSelection"
-     @change="handleZoomChange" @icon-click="handleIconClick" />
+    <GraphBottom class="bottom" v-model="sliderValue" :disable-delete="!hasSelection" @change="handleZoomChange"
+      @icon-click="handleIconClick" :disable-connect="!hasSelection"/>
     <!-- 搜索对话框 -->
     <el-dialog v-model="searchVisible" title="搜索节点" width="30%">
       <el-input v-model="searchKeyword" placeholder="输入节点名称" @keyup.enter="performSearch" />
@@ -59,6 +59,35 @@
         <el-button type="primary" @click="showFileDialog = false">确定</el-button>
       </template>
     </el-dialog>
+
+     <!-- 右键菜单 -->
+     <div
+      v-if="contextMenuVisible"
+      class="context-menu"
+      :style="{
+        left: `${contextMenuPosition.x}px`,
+        top: `${contextMenuPosition.y}px`
+      }"
+      @click.stop
+    >
+      <div class="menu-item" @click="handleClickEdit">
+        <Edit size="16" />
+        <span>编辑</span>
+      </div>
+
+      <div
+        class="menu-item"
+        @click="handleConnect"
+        :class="{ disabled: !hasSelection }"
+      >
+        <Connect size="16" />
+        <span>连线</span>
+      </div>
+      <div class="menu-item" @click="handleDelete">
+        <DeleteRound size="16" />
+        <span>删除</span>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -122,6 +151,33 @@ const fetchGraphData = async () => {
     links: mockLinks
   }
 }
+
+// 在现有状态变量后添加
+const contextMenuVisible = ref(false)
+const contextMenuPosition = ref({ x: 0, y: 0 })
+const contextMenuNode = ref(null)
+
+// 添加右键菜单处理
+const handleNodeRightClick = (params) => {
+  const chart = chartRef.value?.chart
+  if (!chart) return
+
+  const point = chart.convertFromPixel({ seriesIndex: 0 }, [params.offsetX, params.offsetY])
+  const nodeData = findNearestNode(chart, point)
+
+  if (nodeData) {
+    contextMenuNode.value = nodeData
+    contextMenuPosition.value = {
+      x: params.event.clientX,
+      y: params.event.clientY
+    }
+    contextMenuVisible.value = true
+    selectedNodeInfo.value = nodeData
+  }
+}
+
+const isConnectingMode = ref(false) // 是否处于连线模式
+const firstSelectedNode = ref(null) // 第一个选中的节点
 
 
 
@@ -340,6 +396,7 @@ const closePopup = () => {
   console.log('关闭弹窗');
   isPopupVisible.value = false;
   selectedNodeInfo.value = {};
+  contextMenuVisible.value = false
 };
 
 
@@ -514,8 +571,7 @@ const focusOnNode = (node, nodeIdx) => {
 import { ElMessage } from 'element-plus';
 // 在现有状态变量后添加
 const selectedLink = ref(null) // 当前选中的连线
-const hasSelection = computed(() => !!selectedNodeInfo.value.id || !!selectedLink.value) // 是否有选中项
-
+const hasSelection = computed(() => !!selectedNodeInfo.value.id || !!selectedLink.value || isConnectingMode.value)
 const deleteConnection = () => {
   if (!selectedLink.value) return;
   try {
@@ -582,6 +638,22 @@ const handleDelete = () => {
   }
 };
 
+// 连接节点
+const handleConnect = () => {
+  if (!selectedNodeInfo.value.id && !isConnectingMode.value) {
+    ElMessage.warning('请先选择一个节点')
+    return
+  }
+  isConnectingMode.value = !isConnectingMode.value
+  if (isConnectingMode.value) {
+    firstSelectedNode.value = selectedNodeInfo.value
+    ElMessage.info('请选择要连接的节点')
+  } else {
+    firstSelectedNode.value = null
+  }
+  closePopup()
+}
+
 // 处理图标点击事件
 const handleIconClick = (icon) => {
   console.log('点击了图标:', icon);
@@ -605,6 +677,7 @@ const handleIconClick = (icon) => {
       console.log('删除');
       break;
     case 'connect':
+      handleConnect();
       console.log('连接');
       break;
     case 'cancel':
@@ -634,7 +707,7 @@ onMounted(async () => {
   chatOptions.value.series[0].links = graphData.links
   const chart = chartRef.value?.chart;
   if (chart) {
-
+    chart.getZr().on('contextmenu', handleNodeRightClick)
     // 监听拖拽事件
     chart.on('graphRoam', (params) => {
       if (isPopupVisible.value === true) {
@@ -652,6 +725,25 @@ onMounted(async () => {
 
       const point = chart.convertFromPixel({ seriesIndex: 0 }, [params.offsetX, params.offsetY]);
 
+      // 如果是连线模式
+      if (isConnectingMode.value) {
+        const nodeData = findNearestNode(chart, point);
+        if (nodeData && nodeData.id !== firstSelectedNode.value.id) {
+          // 创建新连线
+          const newLink = {
+            source: firstSelectedNode.value.id,
+            target: nodeData.id,
+            id: `${firstSelectedNode.value.id}-${nodeData.id}-${Date.now()}`
+          }
+          chatOptions.value.series[0].links.push(newLink)
+          ElMessage.success('连线创建成功')
+        } else if (nodeData) {
+          ElMessage.warning('不能连接同一个节点')
+        }
+        isConnectingMode.value = false
+        firstSelectedNode.value = null
+        return
+      }
 
 
       let nodeData = findNearestNode(chart, point);
@@ -718,7 +810,7 @@ const findNearestLink = (chart, point, threshold = 10) => {
 const pointToLineDistance = (point, linePoint1, linePoint2) => {
   // 线段长度平方
   const l2 = Math.pow(linePoint1[0] - linePoint2[0], 2) +
-             Math.pow(linePoint1[1] - linePoint2[1], 2);
+    Math.pow(linePoint1[1] - linePoint2[1], 2);
 
   // 如果线段长度接近0，则直接计算点到端点的距离
   if (l2 === 0) {
@@ -730,7 +822,7 @@ const pointToLineDistance = (point, linePoint1, linePoint2) => {
 
   // 计算投影比例 t
   let t = ((point[0] - linePoint1[0]) * (linePoint2[0] - linePoint1[0]) +
-          (point[1] - linePoint1[1]) * (linePoint2[1] - linePoint1[1])) / l2;
+    (point[1] - linePoint1[1]) * (linePoint2[1] - linePoint1[1])) / l2;
 
   // 限制 t 在 [0,1] 范围内
   t = Math.max(0, Math.min(1, t));
@@ -771,5 +863,35 @@ const pointToLineDistance = (point, linePoint1, linePoint2) => {
 .create-input {
   background-color: #E8E8E8;
   width: 80%;
+}
+
+.context-menu {
+  position: fixed;
+  background: white;
+  border-radius: 4px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  z-index: 1000;
+  padding: 4px 0;
+}
+
+.menu-item {
+  display: flex;
+  align-items: center;
+  padding: 8px 16px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.menu-item:hover {
+  background-color: #f5f5f5;
+}
+
+.menu-item.disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.menu-item span {
+  margin-left: 8px;
 }
 </style>
