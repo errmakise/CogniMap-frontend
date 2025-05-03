@@ -47,7 +47,9 @@ ipcMain.handle("open-file", async (event, filePath) => {
 function createWindow() {
   const mainWindow = new BrowserWindow({
     width: 1440,
-    height: 1024,
+    height: 1085,
+    //算上顶部功能栏高度
+    //frame: false, // 去除顶部功能栏
     resizable: false,
     // 禁止调整窗口大小
     maximizable: false,

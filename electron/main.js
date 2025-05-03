@@ -59,7 +59,8 @@ function createWindow() {
   // 创建浏览器窗口
   const mainWindow = new BrowserWindow({
     width: 1440,
-    height: 1024,
+    height: 1085,//算上顶部功能栏高度
+    //frame: false, // 去除顶部功能栏
     resizable: false, // 禁止调整窗口大小
     maximizable: false, // 可选：禁止最大化
     minimizable: true, // 允许最小化（可选）

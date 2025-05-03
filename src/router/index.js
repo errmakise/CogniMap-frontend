@@ -1,14 +1,39 @@
 import { createRouter, createWebHistory } from 'vue-router'
+import { useAuthStore } from '@/stores/auth'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes: [
     {
-      path: '/',
-      name: 'home',
+      path: '/graph',
+      name: 'graph-edit',
       component: () => import('../views/GraphEdit.vue'),
+      meta: { requiresAuth: true },
     },
+    {
+      path: '/auth',
+      name: 'auth',
+      component: () => import('../views/AuthView.vue'),
+    },
+    {
+      //path: '/files',
+      path:'/',
+      name: 'files',
+      component: () => import('../views/FileManagerView.vue'),
+      meta: { requiresAuth: true }
+    }
   ],
 })
 
+// router.beforeEach((to, from, next) => {
+//   const authStore = useAuthStore()
+//   // 当前逻辑会导致无限重定向到/auth
+//   if (!authStore.token && to.path !== '/auth') {
+//     next('/auth')
+//   } else if (authStore.token && to.path === '/auth') {
+//     next('/') // 已登录时访问登录页则重定向到首页
+//   } else {
+//     next()
+//   }
+// })
 export default router

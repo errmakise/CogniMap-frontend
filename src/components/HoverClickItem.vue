@@ -53,6 +53,8 @@ const handleClickFork = () => {
   position: relative;
   border-radius: 15px;
   overflow: hidden;
+  width: 200px;
+
 }
 
 .hover-click-item::before {

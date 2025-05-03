@@ -1,20 +1,22 @@
 <script setup>
 import { RouterView } from 'vue-router'
+import { useAuthStore } from '@/stores/auth'
 import '@/assets/styles/reset.css'
 import '@/assets/styles/variables.css'
 import '@/assets/styles/global.css'
 
 import Sidebar from './components/Sidebar.vue'
+
+const authStore = useAuthStore()
 </script>
 
 <template>
   <div class="app-container">
-    <Sidebar />
-    <div class="body">
+    <Sidebar v-if="authStore.token" />
+    <div class="body" :class="{ 'full-width': !authStore.token }">
       <RouterView />
     </div>
   </div>
-
 </template>
 
 <style scoped>
@@ -23,7 +25,6 @@ import Sidebar from './components/Sidebar.vue'
   height: 100vh;
   margin: 0;
   padding: 0;
-  /* 其他布局样式 */
   background-color: #F0F4F7;
   display: flex;
 }
@@ -33,6 +34,10 @@ import Sidebar from './components/Sidebar.vue'
   background-color: #FFFFFF;
   flex-grow: 1;
   margin: 15px 10px 10px 0px;
+  transition: all 0.3s;
+}
 
+.body.full-width {
+  margin: 0;
 }
 </style>
