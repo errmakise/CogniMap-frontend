@@ -9,7 +9,7 @@
 
     <!-- 操作工具栏 -->
     <div class="toolbar">
-      <el-dropdown>
+      <el-dropdown @command="handleCreateCommand">
         <div class="function-button">
           <AddFile />
           <span>功能</span>
@@ -19,24 +19,31 @@
         <template #dropdown>
           <el-dropdown-menu style="width: 200px;">
             <el-dropdown-item>
-              <GraphFile size="36" color="#00000" />
-              <span>知识图谱</span>
+              <div class="create-item">
+                <GraphFile size="36" color="#00000" />
+                <span>知识图谱</span>
+              </div>
             </el-dropdown-item>
 
             <el-dropdown-item>
-              <Folder size="36" />
-              <span>文件夹</span>
+              <div class="create-item">
+                <Folder size="36" />
+                <span>文件夹</span>
+              </div>
             </el-dropdown-item>
 
             <el-dropdown-item>
-              <MdFile size="36" color="#00000" />
-              <span>文档</span>
+              <div class="create-item">
+                <MdFile size="36" color="#00000" />
+                <span>文档</span>
+              </div>
+
             </el-dropdown-item>
           </el-dropdown-menu>
         </template>
       </el-dropdown>
 
-      <div class="function-button">
+      <div class="function-button" @click="showUploadDialog">
         <Upload />
         <span>上传</span>
       </div>
@@ -50,7 +57,10 @@
           <div class="folder-item" @click="handleFolderClick('documents')">
             <Folder size="36" />
             <span>文档111111111111111111111</span>
-            <Ellipsis style="margin-left: auto;" />
+            <FileActionsMenu style="margin-left: auto;" :showCopy="false"
+            :showOpen="false"
+            @rename="handleRename(row)"
+              @delete="handleDelete(row)" @move="handleMove(row)" />
           </div>
         </el-col>
       </el-row>
@@ -60,10 +70,8 @@
 
     <span class="title">知识图谱</span>
     <!-- 文件列表 -->
-    <el-table :data="filteredFiles"
-    height="450" style="width: 98%;margin-top: 10px;">
-      <el-table-column prop="name" label="名称"  width="600"
-      show-overflow-tooltip>
+    <el-table :data="filteredFiles" height="450" style="width: 100%;margin-top: 10px;">
+      <el-table-column prop="name" label="名称" width="600" show-overflow-tooltip>
         <template #default="{ row }">
           <div class="file-item" @click="handleFileClick(row)">
             <GraphFile color="#00000" style="margin-right: 5px;" />
@@ -72,127 +80,113 @@
         </template>
       </el-table-column>
 
-      <el-table-column prop="modified" label="创建日期" width="400"/>
+      <el-table-column prop="modified" label="创建日期" width="400" />
 
-      <el-table-column label="操作" >
+      <el-table-column label="操作">
         <template #default="{ row }">
-          <el-dropdown>
-            <Ellipsis />
-            <template #dropdown>
-
-              <el-dropdown-menu>
-                <el-dropdown-item @click="handleRename(row)">重命名</el-dropdown-item>
-                <el-dropdown-item @click="handleDelete(row)">删除</el-dropdown-item>
-                <el-dropdown-item @click="handleMove(row)">移动</el-dropdown-item>
-                <el-dropdown-item @click="handleCreateCopy(row)">创建副本</el-dropdown-item>
-                <el-dropdown-item @click="handleExport(row)" v-if="row.type === 'graph'">导出PDF</el-dropdown-item>
-                <el-dropdown-item @click="openContainingFolder(row)">打开所在文件夹</el-dropdown-item>
-              </el-dropdown-menu>
-            </template>
-          </el-dropdown>
+          <FileActionsMenu @rename="handleRename(row)" @delete="handleDelete(row)" @move="handleMove(row)"
+            @copy="handleCreateCopy(row)" @open="openContainingFolder(row)" />
         </template>
 
       </el-table-column>
     </el-table>
 
-    <!-- 各种对话框 -->
-    <FileUploadDialog v-model="uploadVisible" @success="refreshFiles" />
-    <FileCreateDialog v-model="createVisible" @success="refreshFiles" />
-    <FileRenameDialog v-model="renameVisible" :file="selectedFile" @success="refreshFiles" />
-    <FileMoveDialog v-model="moveVisible" :file="selectedFile" @success="refreshFiles" />
+
+
   </div>
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
-import { fetchFiles, exportGraph, createCopy } from '@/api'
+import { ref, computed, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
+import { fetchFiles, createFile, deleteFile, renameFile, moveFile, copyFile } from '@/api'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import { ipcRenderer } from 'electron'
 import path from 'path'
 
+const router = useRouter()
 
-const mockFiles = [
-  {
-    id: '1',
-    name: '示例图谱',
-    type: 'graph',
-    size: '1.2MB',
-    modified: '2023-05-15',
-    path: '/documents/示例图谱.graph'
-  },
-  {
-    id: '2',
-    name: '开发文档',
-    type: 'md',
-    size: '256KB',
-    modified: '2023-05-10',
-    path: '/documents/开发文档.md'
-  },
-  {
-    id: '3',
-    name: '图片资源',
-    type: 'folder',
-    size: '4.5MB',
-    modified: '2023-05-01',
-    path: '/documents/图片资源'
-  },
-  {
-    id: '4',
-    name: '项目计划',
-    type: 'md',
-    size: '128KB',
-    modified: '2023-04-28',
-    path: '/documents/项目计划.md'
+// 状态管理
+const currentPath = ref('/')
+const files = ref([])
+const selectedFile = ref(null)
+const uploadVisible = ref(false)
+const createVisible = ref(false)
+const renameVisible = ref(false)
+const moveVisible = ref(false)
+
+// 计算属性
+const currentPathParts = computed(() => {
+  return currentPath.value.split('/').filter(Boolean)
+})
+
+const filteredFiles = computed(() => {
+  return files.value.filter(file => file.type === 'graph')
+})
+
+// 文件操作功能
+const refreshFiles = async () => {
+  try {
+    files.value = await fetchFiles(currentPath.value)
+  } catch (error) {
+    ElMessage.error('获取文件列表失败')
   }
-]
-
-// 文件类型图标映射
-const fileIcons = {
-  md: 'MdFile',
-  graph: 'GraphFile',
-  folder: 'Folder'
 }
 
-const currentPath = ref('')
-const files = ref([])
-const searchQuery = ref('')
-const selectedFile = ref(null)
+const navigateToPath = (index) => {
+  const newPath = '/' + currentPathParts.value.slice(0, index + 1).join('/')
+  currentPath.value = newPath
+  refreshFiles()
+}
 
-// 获取文件图标组件
-const getFileIcon = (type) => fileIcons[type] || 'File'
+const handleFolderClick = (folderName) => {
+  currentPath.value = path.join(currentPath.value, folderName)
+  refreshFiles()
+}
 
-// 处理文件点击
 const handleFileClick = (file) => {
   if (file.type === 'folder') {
-    navigateToFolder(file.name)
+    handleFolderClick(file.name)
   } else {
-    openFile(file)
+    router.push(`/graph/${file.id}`)
   }
 }
 
-// 导出为PDF
-const handleExport = async (file) => {
+const showUploadDialog = () => {
+  uploadVisible.value = true
+}
+
+const handleCreateCommand = (type) => {
+  createVisible.value = true
+  selectedFile.value = { type }
+}
+
+const handleRename = (file) => {
+  selectedFile.value = file
+  renameVisible.value = true
+}
+
+const handleDelete = async (file) => {
   try {
-    const blob = await exportGraph(file.id)
-    const url = window.URL.createObjectURL(blob)
-    const link = document.createElement('a')
-    link.href = url
-    link.download = `${file.name}.pdf`
-    link.click()
+    await ElMessageBox.confirm(`确定删除 ${file.name}?`, '提示', { type: 'warning' })
+    await deleteFile(file.id)
+    ElMessage.success('删除成功')
+    refreshFiles()
   } catch (error) {
-    ElMessage.error('导出失败')
+    if (error !== 'cancel') {
+      ElMessage.error('删除失败')
+    }
   }
 }
 
-// 打开所在文件夹
-const openContainingFolder = (file) => {
-  ipcRenderer.invoke('open-folder', path.dirname(file.path))
+const handleMove = (file) => {
+  selectedFile.value = file
+  moveVisible.value = true
 }
 
-// 创建副本
 const handleCreateCopy = async (file) => {
   try {
-    await createCopy(file.id)
+    await copyFile(file.id)
     ElMessage.success('副本创建成功')
     refreshFiles()
   } catch (error) {
@@ -200,20 +194,13 @@ const handleCreateCopy = async (file) => {
   }
 }
 
-// 初始化时加载测试数据
+const openContainingFolder = (file) => {
+  ipcRenderer.invoke('open-folder', path.dirname(file.path))
+}
+
+// 初始化
 onMounted(() => {
-  // fetchFiles(currentPath.value).then(data => {
-  //     files.value = data
-  //   })
-
-  files.value = mockFiles
-})
-
-// 过滤文件列表
-const filteredFiles = computed(() => {
-  return files.value.filter(file =>
-    file.name.toLowerCase().includes(searchQuery.value.toLowerCase())
-  )
+  refreshFiles()
 })
 </script>
 
@@ -254,17 +241,24 @@ const filteredFiles = computed(() => {
 }
 
 
+.oprate-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  transition: all 0.2s;
+  margin-bottom: 5px;
+}
 
-
-:deep(.el-dropdown-menu__item) {
+.create-item {
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 12px 16px;
   font-size: 16px;
   font-weight: 600;
   color: #606266;
   transition: all 0.2s;
+  margin-bottom: 5px;
 }
 
 
@@ -315,5 +309,9 @@ const filteredFiles = computed(() => {
   /* 显示省略号 */
   flex: 1;
   /* 占据剩余空间 */
+}
+
+.function-item {
+  font-size: 16px;
 }
 </style>
