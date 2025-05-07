@@ -2,11 +2,10 @@ import axios from 'axios'
 import { ElMessage } from 'element-plus'
 import { useAuthStore } from '@/stores/auth'
 
-const VITE_API_BASE_URL='http://localhost:3000/api'
 
 // 创建axios实例
 const service = axios.create({
-  baseURL: VITE_API_BASE_URL || '/api',
+  baseURL: '/api',
   timeout: 10000
 })
 
@@ -14,6 +13,7 @@ const service = axios.create({
 service.interceptors.request.use(
   config => {
     const authStore = useAuthStore()
+    config.headers['Content-Type'] = 'application/json'
     if (authStore.token) {
       config.headers['Authorization'] = `Bearer ${authStore.token}`
     }

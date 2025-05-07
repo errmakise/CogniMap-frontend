@@ -306,10 +306,8 @@ const chatOptions = ref({
           color: '#FF6B6B'
         }
       }
-    }
-  ]
-
-});
+    }]
+  });
 // 图表引用
 const chartRef = ref(null);
 
@@ -483,10 +481,18 @@ const createNewNode = async () => {
       }
     } else {
       // 调用创建节点API
-      const newNode = await createNode({
+      // const newNode = await creatNode({
+      //   name: newNodeForm.value.name,
+      //   description: newNodeForm.value.description,
+      //   files: selectedFiles.value.map(f => f.id),
+      //   graphId: props.graphId
+      // });
+
+      const newNode = ({
         name: newNodeForm.value.name,
         description: newNodeForm.value.description,
         files: selectedFiles.value.map(f => f.id),
+        id: Math.random().toString(36).substr(2, 9),
         graphId: props.graphId
       });
 
@@ -569,6 +575,7 @@ const focusOnNode = (node, nodeIdx) => {
 }
 
 import { ElMessage } from 'element-plus';
+
 // 在现有状态变量后添加
 const selectedLink = ref(null) // 当前选中的连线
 const hasSelection = computed(() => !!selectedNodeInfo.value.id || !!selectedLink.value || isConnectingMode.value)

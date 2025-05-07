@@ -1,14 +1,15 @@
 import request from '@/utils/request'
 
 // 认证相关API
-export const login = data => request.post('/user/login', data)
+export const login = data => request.get('/user/login',
+  { params: { phone: data.phone, password: data.password }})
 export const register = data => request.post('/user/register', data)
 export const getUserInfo = () => request.get('/auth/user')
 export const logout = () => request.post('/auth/logout')
-// 找回密码API
-export const requestPasswordReset = (email) => {
-  return request.post('/auth/forgot-password', { email })
-}
+export const resetPassword = data =>
+   request.put('/user/password',
+    {phone:data.phone,password:data.password})
+
 
 // 图谱相关API
 export const fetchGraphList = () => request.get('/graph/list')

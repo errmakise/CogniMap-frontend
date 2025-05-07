@@ -6,6 +6,7 @@ const router = createRouter({
   routes: [
     {
       path: '/graph',
+      //path:'/',
       name: 'graph-edit',
       component: () => import('../views/GraphEdit.vue'),
       meta: { requiresAuth: true },
@@ -25,15 +26,18 @@ const router = createRouter({
   ],
 })
 
-// router.beforeEach((to, from, next) => {
-//   const authStore = useAuthStore()
-//   // 当前逻辑会导致无限重定向到/auth
-//   if (!authStore.token && to.path !== '/auth') {
-//     next('/auth')
-//   } else if (authStore.token && to.path === '/auth') {
-//     next('/') // 已登录时访问登录页则重定向到首页
-//   } else {
-//     next()
-//   }
-// })
+router.beforeEach((to, from, next) => {
+
+  const authStore = useAuthStore()
+  console.log('token',authStore)
+  // 当前逻辑会导致无限重定向到/auth
+  if (!authStore.token && to.path !== '/auth') {
+    next('/auth')
+  } else if (authStore.token && to.path === '/auth') {
+    next('/') // 已登录时访问登录页则重定向到首页
+  } else {
+    next()
+  }
+})
+
 export default router

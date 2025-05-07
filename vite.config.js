@@ -31,6 +31,14 @@ export default defineConfig({
     electron_render(),
   ],
   server: {
+    proxy: {
+      '/api': {
+        target: 'http://49.234.192.196:8080',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/api/, '/api'),
+        secure: false // http协议需要添加这个
+      }
+    },
     port: 8888,
     cors: true, // 允许跨域
     hmr: true, // 开启热更新

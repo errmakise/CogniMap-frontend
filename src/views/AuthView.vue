@@ -99,6 +99,9 @@ const rules = {
 
 const submitForm = async () => {
   try {
+    // 先校验表单
+    await authForm.value.validate()
+
     if (isLoginMode.value) {
       await authStore.login({
         phone: form.value.phone,
@@ -109,7 +112,7 @@ const submitForm = async () => {
     } else {
       await authStore.register({
         phone: form.value.phone,
-        username: form.value.username, // 新增用户名参数
+        username: form.value.username,
         password: form.value.password
       })
       ElMessage.success('注册成功')
@@ -117,7 +120,9 @@ const submitForm = async () => {
       form.value = { phone: '', username: '', password: '', confirmPassword: '' } // 重置表单时包含用户名
     }
   } catch (error) {
-    ElMessage.error(error.message)
+    // if(error.message){
+    //   ElMessage.error(error.message)
+    // }
   }
 }
 
@@ -129,6 +134,7 @@ const switchAuthMode = () => {
 const forgotPasswordVisible = ref(false)
 
 const forgotFormRef = ref(null)
+const authForm = ref(null)
 
 const forgotForm = ref({
   phone: '',
@@ -138,11 +144,11 @@ const forgotForm = ref({
 const forgotRules = {
   phone: [
     { required: true, message: '请输入手机号', trigger: 'blur' },
-    { pattern: /^1[3-9]\d{9}$/, message: '请输入正确的手机号格式', trigger: ['blur', 'change'] }
+    //{ pattern: /^1[3-9]\d{9}$/, message: '请输入正确的手机号格式', trigger: ['blur', 'change'] }
   ],
   newPassword: [
     { required: true, message: '请输入新密码', trigger: 'blur' },
-    { min: 6, message: '密码长度不能少于6位', trigger: 'blur' }
+    //{ min: 6, message: '密码长度不能少于6位', trigger: 'blur' }
   ]
 }
 const showForgotPasswordDialog = () => {
@@ -151,11 +157,15 @@ const showForgotPasswordDialog = () => {
 
 const submitForgotPassword = async () => {
   try {
+    //forgotFormRef ：是通过 ref() 创建的模板引用，
+    // 指向忘记密码表单的 el-form 组件实例
+    // 会检查表单中所有配置了 rules 的表单项
+    // 如果有任何验证失败，Promise会reject并包含错误信息
     await forgotFormRef.value.validate()
     // 调用修改密码API
     await authStore.resetPassword({
       phone: forgotForm.value.phone,
-      newPassword: forgotForm.value.newPassword
+      password: forgotForm.value.newPassword
     })
     ElMessage.success('密码修改成功')
     forgotPasswordVisible.value = false
