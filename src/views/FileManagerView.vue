@@ -12,27 +12,27 @@
       <el-dropdown @command="handleCreateCommand">
         <div class="function-button">
           <AddFile />
-          <span>功能</span>
+          <span>新建</span>
           <DownArrow style="margin-left: auto;" />
         </div>
 
         <template #dropdown>
           <el-dropdown-menu style="width: 200px;">
-            <el-dropdown-item>
+            <el-dropdown-item command="graph">
               <div class="create-item">
                 <GraphFile size="36" color="#00000" />
                 <span>知识图谱</span>
               </div>
             </el-dropdown-item>
 
-            <el-dropdown-item>
+            <el-dropdown-item command="folder">
               <div class="create-item">
                 <Folder size="36" />
                 <span>文件夹</span>
               </div>
             </el-dropdown-item>
 
-            <el-dropdown-item>
+            <el-dropdown-item command="md">
               <div class="create-item">
                 <MdFile size="36" color="#00000" />
                 <span>文档</span>
@@ -53,14 +53,12 @@
     <div class="folder-list">
       <span class="title">文件夹</span>
       <el-row :gutter="15" class="list">
-        <el-col :xs="12" :sm="8" :md="8" :lg="6" v-for="(folder, index) in 9" :key="index">
-          <div class="folder-item" @click="handleFolderClick('documents')">
+        <el-col :xs="12" :sm="8" :md="8" :lg="6" v-for="folder in folderList" :key="folder.id">
+          <div class="folder-item" @click="handleFolderClick(folder)">
             <Folder size="36" />
-            <span>文档111111111111111111111</span>
-            <FileActionsMenu style="margin-left: auto;" :showCopy="false"
-            :showOpen="false"
-            @rename="handleRename(row)"
-              @delete="handleDelete(row)" @move="handleMove(row)" />
+            <span>{{ folder.name }}</span>
+            <FileActionsMenu style="margin-left: auto;" :showCopy="false" :showOpen="false"
+              @rename="handleRename(folder)" @delete="handleDelete(folder)" @move="handleMove(folder)" />
           </div>
         </el-col>
       </el-row>
@@ -80,7 +78,11 @@
         </template>
       </el-table-column>
 
-      <el-table-column prop="modified" label="创建日期" width="400" />
+      <el-table-column label="创建日期" width="400" prop="createTime">
+        <template #default="{ row }">
+          {{ formatDate(row.lastTime) }}
+        </template>
+      </el-table-column>
 
       <el-table-column label="操作">
         <template #default="{ row }">
@@ -99,12 +101,23 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { fetchFiles, createFile, deleteFile, renameFile, moveFile, copyFile } from '@/api'
+import { fetchFiles, createFolder, deleteFile, renameFile, moveFile, copyFile, createNewFile } from '@/api'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { ipcRenderer } from 'electron'
 import path from 'path'
 
 const router = useRouter()
+
+const folderList = computed(() => {
+  return files.value.filter(file => file.isFolder === 1)
+})
+
+
+const formatDate = (dateString) => {
+  if (!dateString) return ''
+  const date = new Date(dateString)
+  return date.toLocaleString() // 可以根据需要调整格式
+}
 
 // 状态管理
 const currentPath = ref('/')
@@ -121,16 +134,36 @@ const currentPathParts = computed(() => {
 })
 
 const filteredFiles = computed(() => {
-  return files.value.filter(file => file.type === 'graph')
+  return files.value.filter(file => file.type === 0)
 })
 
 // 文件操作功能
+const currentFolderId = ref(0) // 使用folderId代替path
+const pagination = ref({
+  pageNo: 1,
+  pageSize: 10
+})
+
+// 修改refreshFiles方法
 const refreshFiles = async () => {
   try {
-    files.value = await fetchFiles(currentPath.value)
+    const res = await fetchFiles(
+      currentFolderId.value,
+      pagination.value.pageNo,
+      pagination.value.pageSize
+    )
+    files.value = res.list || []
   } catch (error) {
+    files.value = []
     ElMessage.error('获取文件列表失败')
   }
+  console.log('获取文件列表', files.value)
+}
+
+// 修改文件夹点击处理
+const handleFolderClick = (folder) => {
+  currentFolderId.value = folder.id
+  refreshFiles()
 }
 
 const navigateToPath = (index) => {
@@ -139,17 +172,13 @@ const navigateToPath = (index) => {
   refreshFiles()
 }
 
-const handleFolderClick = (folderName) => {
-  currentPath.value = path.join(currentPath.value, folderName)
-  refreshFiles()
-}
-
 const handleFileClick = (file) => {
-  if (file.type === 'folder') {
-    handleFolderClick(file.name)
-  } else {
+  if (file.isFolder) {
+    handleFolderClick(file)
+  } else if (file.type === 0) { // 知识图谱
     router.push(`/graph/${file.id}`)
   }
+  // 其他类型文件处理...
 }
 
 const showUploadDialog = () => {
@@ -157,13 +186,101 @@ const showUploadDialog = () => {
 }
 
 const handleCreateCommand = (type) => {
-  createVisible.value = true
-  selectedFile.value = { type }
+  if (type === 'folder') {
+    ElMessageBox.prompt('请输入文件夹名称', '新建文件夹', {
+      confirmButtonText: '确定',
+      cancelButtonText: '取消',
+      inputPattern: /^.{1,50}$/,
+      inputErrorMessage: '文件夹名称长度应在1-50个字符之间',
+      roundButton: true,
+    }).then(async ({ value }) => {
+      try {
+        const res = await createFolder(value, currentFolderId.value)
+        ElMessage.success('文件夹创建成功')
+        refreshFiles()
+      } catch (error) {
+        ElMessage.error('文件夹创建失败')
+      }
+    }).catch(() => {
+      console.log('取消创建文件夹')
+    })
+  } else if (type === 'md' || type === 'graph') {
+    const fileType = type === 'md' ? 1 : 0 // 1表示文档，0表示图谱
+    const fileTypeName = type === 'md' ? '文档' : '知识图谱'
+
+    ElMessageBox.prompt(`请输入${fileTypeName}名称`, `新建${fileTypeName}`, {
+      confirmButtonText: '确定',
+      cancelButtonText: '取消',
+      inputPattern: /^.{1,50}$/,
+      inputErrorMessage: `${fileTypeName}名称长度应在1-50个字符之间`,
+      roundButton: true,
+    }).then(async ({ value }) => {
+      try {
+        const res = await createNewFile(value, fileType, currentFolderId.value)
+        ElMessage.success(`${fileTypeName}创建成功`)
+        refreshFiles()
+      } catch (error) {
+        ElMessage.error(`${fileTypeName}创建失败`)
+      }
+    }).catch(() => {
+      console.log(`取消创建${fileTypeName}`)
+    })
+  }
 }
 
-const handleRename = (file) => {
-  selectedFile.value = file
-  renameVisible.value = true
+const handleRename = async (file) => {
+  try {
+
+    const { value: newName } = await ElMessageBox.prompt(
+      '请输入新名称',
+      '重命名',
+      {
+        confirmButtonText: '确定',
+        cancelButtonText: '取消',
+        inputPattern: /^.{1,50}$/,
+        inputErrorMessage: '名称长度应在1-50个字符之间',
+        inputValue: file.name
+      }
+    )
+    if (file.isFolder) {
+      console.log('重命名文件夹')
+    } else {
+      console.log('重命名文件')
+      //await renameFile(file.id, newName, file.folderId)//待定，当前还没实现“获取所有图谱文件”这个api
+      await renameFile(file.id, newName, currentFolderId.value)
+
+    }
+
+    ElMessage.success('重命名成功')
+    refreshFiles()
+  } catch (error) {
+    if (error !== 'cancel') {
+      ElMessage.error('重命名失败')
+    }
+  }
+}
+
+const handleMove = async (file) => {
+  try {
+    const { value: targetFolderId } = await ElMessageBox.prompt(
+      '请输入目标文件夹ID',
+      '移动文件',
+      {
+        confirmButtonText: '确定',
+        cancelButtonText: '取消',
+        inputPattern: /^\d+$/,
+        inputErrorMessage: '请输入有效的文件夹ID'
+      }
+    )
+
+    await moveFile(file.id, targetFolderId, file.name)
+    ElMessage.success('移动成功')
+    refreshFiles()
+  } catch (error) {
+    if (error !== 'cancel') {
+      ElMessage.error('移动失败')
+    }
+  }
 }
 
 const handleDelete = async (file) => {
@@ -179,10 +296,7 @@ const handleDelete = async (file) => {
   }
 }
 
-const handleMove = (file) => {
-  selectedFile.value = file
-  moveVisible.value = true
-}
+
 
 const handleCreateCopy = async (file) => {
   try {

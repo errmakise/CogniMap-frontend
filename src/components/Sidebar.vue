@@ -1,7 +1,8 @@
 <template>
   <div class="bar-container">
     <div class="function-list">
-      <HoverClickItem :activeKey="activeItem" itemKey="account" @clickItem="clickFunction">
+      <HoverClickItem :activeKey="activeItem" itemKey="account"
+      @clickItem="clickFunction">
         <Account />
         <div class="function-name">账号</div>
       </HoverClickItem>
@@ -11,7 +12,8 @@
         <div class="function-name">问答</div>
       </HoverClickItem>
 
-      <HoverClickItem :activeKey="activeItem" itemKey="graph" @clickItem="clickFunction">
+      <HoverClickItem :activeKey="activeItem" itemKey="graph"
+      @clickItem="clickFunction">
         <Graph />
         <div class="function-name">图谱</div>
       </HoverClickItem>
@@ -24,7 +26,8 @@
 
     <el-scrollbar class="scrollbar">
       <div class="files-list">
-        <HoverClickItem v-for="(file, index) in historyFiles" :key="index" :activeKey="activeItem" :itemKey="file.id"
+        <HoverClickItem v-for="(file, index) in historyFiles"
+        :key="index" :activeKey="activeItem" :itemKey="file.id"
           @clickItem="openFile" :isFile="true" @clickFork="closeFile">
           <!-- 根据 fileType 动态渲染图标 -->
           <component :is="getFileIcon(file.fileType).component" :size="24" />
@@ -74,6 +77,7 @@ const downloadHistoryStore = useDownloadHistoryStore()
 const downloadDialogVisible = ref(false);
 
 const openDownloadedFile = async (filePath) => {
+  console.log('打开下载文件:', filePath)
   try {
     // 修改为打开文件所在目录
     await ipcRenderer.invoke('open-folder', path.dirname(filePath))
@@ -95,6 +99,7 @@ const handleClose = (done) => {
   done();
 };
 
+const router = useRouter();
 const historyFiles = ref([
   { name: 'example1.txt', id: 1, fileType: 'md' },
   { name: 'example2.json', id: 2, fileType: 'graph' },
@@ -125,7 +130,7 @@ const openFile = (fileId) => {
   console.log('打开文件:id:', fileId);
 };
 
-const activeItem = ref('account');
+const activeItem = ref('graph');
 const activeFile = ref('');
 
 const clickListFork = () => {
@@ -137,12 +142,14 @@ const clickFunction = (itemName) => {
   switch (itemName) {
     case 'account':
       console.log('点击 账号');
+      router.push({name:'account'})
       break;
     case 'qa':
       console.log('点击 问答');
       break;
     case 'graph':
       console.log('点击 图谱');
+      router.push({name:'files'})
       break;
     default:
       console.log('点击 未知');

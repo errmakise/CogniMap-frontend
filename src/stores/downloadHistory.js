@@ -48,17 +48,18 @@ export const useDownloadHistoryStore = defineStore('downloadHistory', () => {
       time: '2023/5/10 16:45:33',
     },
   ])
-  const addRecord = (filePath) => {
-    // 确保filePath是字符串
-    if (typeof filePath !== 'string') {
-      console.error('文件路径必须是字符串:', filePath)
+  const addRecord = (record) => {
+    // 确保record包含path属性
+    if (!record.path) {
+      console.error('添加记录必须包含path属性')
       return
     }
+
     history.value.unshift({
-      name: path.basename(filePath),
-      path: filePath,
-      dir: path.dirname(filePath),
-      fileId: Date.now().toString(), // 添加唯一ID
+      name: path.basename(record.path),
+      path: record.path, // 使用传入的完整路径
+      dir: path.dirname(record.path),
+      fileId: Date.now().toString(),
       time: new Date().toLocaleString(),
     })
   }

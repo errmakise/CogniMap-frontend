@@ -18,6 +18,7 @@ export const useAuthStore = defineStore('auth', () => {
       })
       token.value = res.token
       userInfo.value = {
+        phone: res.phone,
         userId: res.userId,
         username: res.username,
         avatar: res.avatar,
@@ -50,10 +51,11 @@ export const useAuthStore = defineStore('auth', () => {
   }
 
   const resetPassword = async (data) => {
+    console.log('重置密码', data)
     try {
       const res = await apiResetPassword({
         phone: data.phone,
-        password:data. password
+        password:data.password
       })
       console.log('重置密码成功', res)
       return res

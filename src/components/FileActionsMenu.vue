@@ -46,3 +46,11 @@ defineProps({
 
 const emit = defineEmits(['rename', 'delete', 'move', 'copy', 'open'])
 </script>
+
+<style scoped>
+.oprate-item {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+</style>

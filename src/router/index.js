@@ -22,14 +22,20 @@ const router = createRouter({
       name: 'files',
       component: () => import('../views/FileManagerView.vue'),
       meta: { requiresAuth: true }
-    }
+    },
+    {
+      path: '/account',
+      name: 'account',
+      component: () => import('../views/AccountView.vue'),
+      meta: { requiresAuth: true }
+    },
   ],
 })
 
 router.beforeEach((to, from, next) => {
 
   const authStore = useAuthStore()
-  console.log('token',authStore)
+  console.log('token',authStore.token)
   // 当前逻辑会导致无限重定向到/auth
   if (!authStore.token && to.path !== '/auth') {
     next('/auth')

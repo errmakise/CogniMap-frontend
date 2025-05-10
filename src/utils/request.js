@@ -15,12 +15,13 @@ service.interceptors.request.use(
     const authStore = useAuthStore()
     config.headers['Content-Type'] = 'application/json'
     if (authStore.token) {
-      config.headers['Authorization'] = `Bearer ${authStore.token}`
+      console.log('token', authStore.token)
+      config.headers['Authorization'] = `${authStore.token.trim()}`
     }
     return config
   },
   error => {
-    return Promise.reject(error)
+     return Promise.reject(error)
   }
 )
 
@@ -59,6 +60,8 @@ service.interceptors.response.use(
           ElMessage.error(error.response.data.message || '请求失败')
       }
     }
+    console.error('请求失败', error.config.url, error.config.headers)
+
     return Promise.reject(error)
   }
 )
