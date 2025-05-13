@@ -2,23 +2,12 @@
   <div class="file-manager">
 
     <!-- 操作工具栏 -->
-    <OperationToolbar
-      @command="handleCreateCommand"
-      @upload-click="showUploadDialog"
-    />
+    <OperationToolbar @command="handleCreateCommand" @upload-click="showUploadDialog" />
 
 
-    <FileList
-      :files="filteredFiles"
-      :folders="folderList"
-      @file-click="handleFileClick"
-      @folder-click="handleFolderClick"
-      @rename="handleRename"
-      @delete="handleDelete"
-      @move="handleMove"
-      @copy="handleCreateCopy"
-      @open="openContainingFolder"
-    />
+    <FileList :files="filteredFiles" :folders="folderList" @file-click="handleFileClick"
+      @folder-click="handleFolderClick" @rename="handleRename" @delete="handleDelete" @move="handleMove"
+      @copy="handleCreateCopy" @open="openContainingFolder" />
 
   </div>
 </template>
@@ -26,18 +15,21 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { fetchFiles} from '@/api'
+import { fetchFiles } from '@/api'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { ipcRenderer } from 'electron'
 import path from 'path'
 import { useFileOperations } from '@/composables/useFileOperations'
 import { useFileActions } from '@/composables/useFileActions'
+import { useVisitHistoryStore } from '@/stores/visitHistory'
+
 
 // 状态管理
 const files = ref([])
 const uploadVisible = ref(false)
 const currentFolderId = ref(0)
 const router = useRouter()
+const visitHistory = useVisitHistoryStore()
 
 const pagination = ref({
   pageNo: 1,
@@ -91,9 +83,15 @@ const handleFolderClick = (folder) => {
 
 
 const handleFileClick = (file) => {
+  console.log('点击文件', file)
   if (file.isFolder) {
     handleFolderClick(file)
   } else if (file.type === 0) { // 知识图谱
+    visitHistory.addRecord({
+      id: file.id,
+      name: file.name,
+      type: file.type,
+    })
     router.push(`/graph/${file.id}`)
   }
   // 其他类型文件处理...

@@ -5,11 +5,18 @@ const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes: [
     {
-      path: '/graph',
+      path: '/qa',
+      name: 'qa',
+      component:  () => import('../views/QaView.vue'),
+      meta: { requiresAuth: true }
+    },
+    {
+      path: '/graph/:graphId',
       //path:'/',
       name: 'graph-edit',
       component: () => import('../views/GraphEdit.vue'),
       meta: { requiresAuth: true },
+      props: true, // 启用路由参数自动注入
     },
     {
       path: '/auth',

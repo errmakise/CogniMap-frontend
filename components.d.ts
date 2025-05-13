@@ -43,6 +43,7 @@ declare module 'vue' {
     OpenFolder: typeof import('./src/components/icons/OpenFolder.vue')['default']
     OperationToolbar: typeof import('./src/components/file-manager/OperationToolbar.vue')['default']
     QA: typeof import('./src/components/icons/QA.vue')['default']
+    QA2: typeof import('./src/components/icons/QA2.vue')['default']
     Remove: typeof import('./src/components/icons/Remove.vue')['default']
     RightArrow: typeof import('./src/components/icons/RightArrow.vue')['default']
     RouterLink: typeof import('vue-router')['RouterLink']

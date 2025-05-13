@@ -49,7 +49,6 @@ export const useDownloadHistoryStore = defineStore('downloadHistory', () => {
     },
   ])
   const addRecord = (record) => {
-    // 确保record包含path属性
     if (!record.path) {
       console.error('添加记录必须包含path属性')
       return

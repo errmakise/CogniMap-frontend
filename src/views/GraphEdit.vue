@@ -8,7 +8,7 @@
     <!-- :loading="selectedNodeInfo.loading" -->
 
     <GraphBottom class="bottom" v-model="sliderValue" :disable-delete="!hasSelection" @change="handleZoomChange"
-      @icon-click="handleIconClick" :disable-connect="!hasSelection"/>
+      @icon-click="handleIconClick" :disable-connect="!hasSelection" />
     <!-- 搜索对话框 -->
     <el-dialog v-model="searchVisible" title="搜索节点" width="30%">
       <el-input v-model="searchKeyword" placeholder="输入节点名称" @keyup.enter="performSearch" />
@@ -60,26 +60,17 @@
       </template>
     </el-dialog>
 
-     <!-- 右键菜单 -->
-     <div
-      v-if="contextMenuVisible"
-      class="context-menu"
-      :style="{
-        left: `${contextMenuPosition.x}px`,
-        top: `${contextMenuPosition.y}px`
-      }"
-      @click.stop
-    >
+    <!-- 右键菜单 -->
+    <div v-if="contextMenuVisible" class="context-menu" :style="{
+      left: `${contextMenuPosition.x}px`,
+      top: `${contextMenuPosition.y}px`
+    }" @click.stop>
       <div class="menu-item" @click="handleClickEdit">
         <Edit size="16" />
         <span>编辑</span>
       </div>
 
-      <div
-        class="menu-item"
-        @click="handleConnect"
-        :class="{ disabled: !hasSelection }"
-      >
+      <div class="menu-item" @click="handleConnect" :class="{ disabled: !hasSelection }">
         <Connect size="16" />
         <span>连线</span>
       </div>
@@ -95,6 +86,14 @@
 import { useDownloadHistoryStore } from '@/stores/downloadHistory'
 import { ipcRenderer } from 'electron'
 import path from 'path'
+import {
+  fetchGraphDetail,
+  updateGraphNode,
+  createGraphNode,
+  deleteGraphNode,
+  createGraphLink,
+  deleteGraphLink
+} from '@/api'
 
 const downloadHistoryStore = useDownloadHistoryStore()
 
@@ -141,14 +140,18 @@ const mockLinks = [
 
 // 模拟API获取数据函数
 const fetchGraphData = async () => {
-  // 实际开发中这里会是API调用
-  // const response = await fetch('/api/graph-data')
-  // return await response.json()
-
-  // 开发阶段返回模拟数据
-  return {
-    nodes: mockNodes,
-    links: mockLinks
+  try {
+    const res = await fetchGraphDetail(props.graphId)
+    return {
+      nodes: res.map(node => ({
+        ...node,
+        _detailLoaded: false,
+        _loading: false
+      }))
+    }
+  } catch (error) {
+    console.error('获取图谱数据失败', error)
+    return { nodes: [], links: [] }
   }
 }
 
@@ -307,7 +310,7 @@ const chatOptions = ref({
         }
       }
     }]
-  });
+});
 // 图表引用
 const chartRef = ref(null);
 
@@ -457,13 +460,14 @@ const resetForm = () => {
 const createNewNode = async () => {
   try {
     if (isEditMode.value) {
-      // 调用更新节点API
-      // await updateNode({
-      //   id: currentNodeId.value,
-      //   name: newNodeForm.value.name,
-      //   description: newNodeForm.value.description,
-      //   files: selectedFiles.value.map(f => f.id)
-      // });
+      await updateGraphNode(currentNodeId.value, {
+        name: newNodeForm.value.name,
+        description: newNodeForm.value.description,
+        fileIds: selectedFiles.value.map(f => f.id),
+        fileNames: selectedFiles.value.map(f => f.label),
+        size: 10,
+        color: "#000000"
+      })
       console.log('currentNodeId', currentNodeId.value);
       // 更新现有节点数据
       const nodeIndex = chatOptions.value.series[0].data.findIndex(n => n.id === currentNodeId.value);
@@ -488,13 +492,14 @@ const createNewNode = async () => {
       //   graphId: props.graphId
       // });
 
-      const newNode = ({
+      const newNode = await createGraphNode({
         name: newNodeForm.value.name,
         description: newNodeForm.value.description,
         files: selectedFiles.value.map(f => f.id),
-        id: Math.random().toString(36).substr(2, 9),
-        graphId: props.graphId
-      });
+        graphId: props.graphId,
+        size: 10,
+        color: "#000000"
+      })
 
       // 添加到图表数据
       chatOptions.value.series[0].data.push({
@@ -575,6 +580,7 @@ const focusOnNode = (node, nodeIdx) => {
 }
 
 import { ElMessage } from 'element-plus';
+import { color } from 'echarts'
 
 // 在现有状态变量后添加
 const selectedLink = ref(null) // 当前选中的连线
@@ -608,7 +614,7 @@ const deleteConnection = () => {
 const deleteNode = async () => {
   if (selectedNodeInfo.value.id) {
     try {
-      //await deleteNode(selectedNodeInfo.value.id);
+      //await deleteGraphNode(selectedNodeInfo.value.id)
 
       // 从图表数据中移除节点
       const index = chatOptions.value.series[0].data.findIndex(
@@ -660,6 +666,9 @@ const handleConnect = () => {
   }
   closePopup()
 }
+
+
+
 
 // 处理图标点击事件
 const handleIconClick = (icon) => {
@@ -726,7 +735,7 @@ onMounted(async () => {
     });
 
 
-    chart.getZr().on('click', (params) => {
+    chart.getZr().on('click', async(params) => {
       closePopup();
       console.log('点击事件', params);
 
@@ -737,11 +746,16 @@ onMounted(async () => {
         const nodeData = findNearestNode(chart, point);
         if (nodeData && nodeData.id !== firstSelectedNode.value.id) {
           // 创建新连线
-          const newLink = {
-            source: firstSelectedNode.value.id,
-            target: nodeData.id,
-            id: `${firstSelectedNode.value.id}-${nodeData.id}-${Date.now()}`
-          }
+          // const newLink = {
+          //   node1: firstSelectedNode.value.id,
+          //   node2: nodeData.id,
+          //   id: `${firstSelectedNode.value.id}-${nodeData.id}-${Date.now()}`
+          // }
+
+          const newLink = await createGraphLink(props.graphId,{
+            node1: firstSelectedNode.value.id,
+            node2: nodeData.id,
+          })
           chatOptions.value.series[0].links.push(newLink)
           ElMessage.success('连线创建成功')
         } else if (nodeData) {

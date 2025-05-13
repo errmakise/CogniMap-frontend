@@ -34,6 +34,9 @@ import { ipcRenderer } from 'electron'
 import path from 'path'
 import { useFileOperations } from '@/composables/useFileOperations'
 import { useFileActions } from '@/composables/useFileActions'
+import { useVisitHistoryStore } from '@/stores/visitHistory'
+
+const visitHistory = useVisitHistoryStore()
 
 const route = useRoute()
 const router = useRouter()
@@ -73,6 +76,11 @@ const handleItemClick = (item) => {
   if (item.isFolder) {
     router.push(`/files/folder/${item.id}`)
   } else if (item.type === 0) {
+    visitHistory.addRecord({
+      id: item.id,
+      name: item.name,
+      type: item.type,
+    })
     router.push(`/graph/${item.id}`)
   }
 }

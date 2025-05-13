@@ -26,10 +26,12 @@ export const resetPassword = (data) =>
 export const updateUserInfo = (data) => request.put('/user', data)
 
 // 图谱相关API
-export const fetchGraphList = () => request.get('/graph/list')
-export const createGraph = (data) => request.post('/graph', data)
-export const updateGraph = (id, data) => request.put(`/graph/${id}`, data)
-export const deleteGraph = (id) => request.delete(`/graph/${id}`)
+export const fetchGraphDetail = (id) => request.get(`/graph/${id}/node`)
+export const updateGraphNode = (id, data) => request.put(`/graph/node/${id}`, data)
+export const createGraphNode = (data) => request.post('/graph/node', data)
+export const deleteGraphNode = (id) => request.delete(`/graph/node/${id}`)
+export const createGraphLink = (data) => request.post(`/graph/${id}/relation`, data)
+export const deleteGraphLink = (id) => request.delete(`/graph/link/${id}`)
 
 // 文件相关API
 export const uploadFile = (data) => {
@@ -76,3 +78,15 @@ export const moveFile = (id, folderId, newName) =>
 export const exportGraph = (id) => request.get(`/files/${id}/export`, { responseType: 'blob' })
 export const createCopy = (id) => request.post(`/files/${id}/copy`)
 export const copyFile = (id, newPath) => request.post(`/files/${id}/copy`, { newPath })
+
+//问答相关API
+export const fetchQuestionsList = () =>
+  request.get('/agent')
+export const fetchQuestionDetail = (id) => request.get(`/agent/${id}`)
+export const renameQuestion = (id, title) =>
+  request.put(`/agent/${id}`, { title: title })
+export const deleteQuestion = (id) =>
+  request.delete(`/question/${id}`)
+export const createQuestion = () => request.post('/agent')
+export const updateQuestion = (id, question) => request.post(`/agent/${id}`, {question: question})
+

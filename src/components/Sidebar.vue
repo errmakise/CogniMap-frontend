@@ -26,12 +26,12 @@
 
     <el-scrollbar class="scrollbar">
       <div class="files-list">
-        <HoverClickItem v-for="(file, index) in historyFiles"
-        :key="index" :activeKey="activeItem" :itemKey="file.id"
+        <HoverClickItem v-for="item in visitHistory.history" :key="item.id"
+         :activeKey="activeItem" :itemKey="item.id"
           @clickItem="openFile" :isFile="true" @clickFork="closeFile">
           <!-- 根据 fileType 动态渲染图标 -->
-          <component :is="getFileIcon(file.fileType).component" :size="24" />
-          <div class="file-name"> {{ file.name }}</div>
+          <component :is="getFileIcon(item.type).component" :size="24" />
+          <div class="file-name"> {{ item.name }}</div>
         </HoverClickItem>
       </div>
     </el-scrollbar>
@@ -72,6 +72,8 @@ import { useDownloadHistoryStore } from '@/stores/downloadHistory'
 import { Delete } from '@element-plus/icons-vue'
 import { ipcRenderer } from 'electron'
 import path from 'path'
+import { useVisitHistoryStore } from '@/stores/visitHistory'
+const visitHistory = useVisitHistoryStore()
 
 const downloadHistoryStore = useDownloadHistoryStore()
 const downloadDialogVisible = ref(false);
@@ -100,26 +102,7 @@ const handleClose = (done) => {
 };
 
 const router = useRouter();
-const historyFiles = ref([
-  { name: 'example1.txt', id: 1, fileType: 'md' },
-  { name: 'example2.json', id: 2, fileType: 'graph' },
-  { name: 'example3.csv', id: 3, fileType: 'folder' },
-  { name: 'example1.txt', id: 1, fileType: 'md' },
-  { name: 'example2.json', id: 2, fileType: 'graph' },
-  { name: 'example3.csv', id: 3, fileType: 'folder' },
-  { name: 'example1.txt', id: 1, fileType: 'md' },
-  { name: 'example2.json', id: 2, fileType: 'graph' },
-  { name: 'example3.csv', id: 3, fileType: 'folder' },
-  { name: 'example1.txt', id: 1, fileType: 'md' },
-  { name: 'example2.json', id: 2, fileType: 'graph' },
-  { name: 'example3.csv', id: 3, fileType: 'folder' },
-  { name: 'example1.txt', id: 1, fileType: 'md' },
-  { name: 'example2.json', id: 2, fileType: 'graph' },
-  { name: 'example3.csv', id: 3, fileType: 'folder' },
-  { name: 'example1.txt', id: 1, fileType: 'md' },
-  { name: 'example2.json', id: 2, fileType: 'graph' },
-  { name: 'example3.csv', id: 3, fileType: 'folder' },
-]);
+
 
 const closeFile = (fileId) => {
   console.log('关闭文件:id:', fileId);
@@ -146,6 +129,7 @@ const clickFunction = (itemName) => {
       break;
     case 'qa':
       console.log('点击 问答');
+      router.push({name:'qa'})
       break;
     case 'graph':
       console.log('点击 图谱');
@@ -159,24 +143,24 @@ const clickFunction = (itemName) => {
 
 // 根据 fileType 返回对应的图标组件
 const fileIconConfig = {
-  md: {
+  '1': {
     component: MdFile,
     color: '#FF0000', // 红色
     size: 24
   },
-  graph: {
+  '0': {
     component: GraphFile,
     color: '#00FF00', // 绿色
     size: 24
   },
-  folder: {
+  '-1': {
     component: Folder,
     color: '#0000FF', // 蓝色
     size: 24
   }
 };
-const getFileIcon = (fileType) => {
-  return fileIconConfig[fileType] || MdFile;
+const getFileIcon = (type) => {
+  return fileIconConfig[type] || MdFile;
 };
 
 </script>
