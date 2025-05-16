@@ -21,7 +21,7 @@
 
     <div class="connector-line">
       <div class="line"></div>
-      <Fork @click="clickListFork()" />
+      <Fork @click="clearAllHistory()" />
     </div>
 
     <el-scrollbar class="scrollbar">
@@ -74,6 +74,7 @@ import { ipcRenderer } from 'electron'
 import path from 'path'
 import { useVisitHistoryStore } from '@/stores/visitHistory'
 const visitHistory = useVisitHistoryStore()
+const { activeItem } = storeToRefs(visitHistory)
 
 const downloadHistoryStore = useDownloadHistoryStore()
 const downloadDialogVisible = ref(false);
@@ -104,24 +105,50 @@ const handleClose = (done) => {
 const router = useRouter();
 
 
-const closeFile = (fileId) => {
-  console.log('关闭文件:id:', fileId);
-};
-
+// 打开文件
 const openFile = (fileId) => {
-  activeItem.value = fileId;
-  console.log('打开文件:id:', fileId);
+  const file = visitHistory.history.find(item => item.id === fileId);
+  if (!file) return;
+
+
+  visitHistory.setActiveItem(fileId);
+
+  // 根据文件类型跳转到不同页面
+  if (file.type === 0) { // 知识图谱
+    router.push(`/graph/${file.id}`);
+  } else if (file.type === 1) { // Markdown文件
+    router.push(`/md/${file.id}`);
+  }
 };
 
-const activeItem = ref('graph');
-const activeFile = ref('');
-
-const clickListFork = () => {
-  console.log('点击 fork');
+// 关闭/删除单个文件
+const closeFile = (fileId) => {
+  visitHistory.removeRecord(fileId);
+  console.log(activeItem.value)
+  console.log('关闭文件:', fileId);
+  // 如果当前打开的文件被删除，重置activeItem
+  if (activeItem.value === fileId) {
+    console.log('当前打开的文件被删除，重置activeItem')
+    visitHistory.setActiveItem('graph');
+    router.push({name:'files'})
+  }
 };
+
+// 清空所有历史记录
+const clearAllHistory = () => {
+  visitHistory.clearAll();
+  visitHistory.setActiveItem('graph');
+  router.push({name:'files'})
+};
+
+
+
+
+
 
 const clickFunction = (itemName) => {
-  activeItem.value = itemName;
+
+  visitHistory.setActiveItem(itemName);
   switch (itemName) {
     case 'account':
       console.log('点击 账号');

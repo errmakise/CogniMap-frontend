@@ -26,12 +26,14 @@ export const resetPassword = (data) =>
 export const updateUserInfo = (data) => request.put('/user', data)
 
 // 图谱相关API
-export const fetchGraphDetail = (id) => request.get(`/graph/${id}/node`)
+export const fetchGraphNodes = (id) => request.get(`/graph/${id}/node`)
 export const updateGraphNode = (id, data) => request.put(`/graph/node/${id}`, data)
-export const createGraphNode = (data) => request.post('/graph/node', data)
+export const createGraphNode = (id,data) => request.post(`/graph/${id}/node`, data)
 export const deleteGraphNode = (id) => request.delete(`/graph/node/${id}`)
-export const createGraphLink = (data) => request.post(`/graph/${id}/relation`, data)
-export const deleteGraphLink = (id) => request.delete(`/graph/link/${id}`)
+export const createGraphLink = (id,data) => request.post(`/graph/${id}/relation`, data)
+export const deleteGraphLink = (id) => request.delete(`/graph/relation/${id}`)
+export const fetchGraphLinks = (id) => request.get(`/graph/${id}/relation`)
+
 
 // 文件相关API
 export const uploadFile = (data) => {
@@ -90,3 +92,11 @@ export const deleteQuestion = (id) =>
 export const createQuestion = () => request.post('/agent')
 export const updateQuestion = (id, question) => request.post(`/agent/${id}`, {question: question})
 
+
+
+export const fetchMdFile = (id) => request.get(`/file/file/${id}`)
+export const updateMdFile = (id, formData) => request.post(`/file/file/${id}`, formData, {
+  headers: {
+    'Content-Type': 'multipart/form-data'
+  }
+})

@@ -82,6 +82,7 @@ const handleFolderClick = (folder) => {
 }
 
 
+
 const handleFileClick = (file) => {
   console.log('点击文件', file)
   if (file.isFolder) {
@@ -92,7 +93,16 @@ const handleFileClick = (file) => {
       name: file.name,
       type: file.type,
     })
+    visitHistory.setActiveItem(file.id)
     router.push(`/graph/${file.id}`)
+  }else if (file.type === 1) { // md
+    visitHistory.addRecord({
+      id: file.id,
+      name: file.name,
+      type: file.type,
+    })
+    visitHistory.setActiveItem(file.id)
+    router.push(`/md/${file.id}`)
   }
   // 其他类型文件处理...
 }

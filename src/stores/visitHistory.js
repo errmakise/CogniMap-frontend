@@ -3,7 +3,11 @@ import { ref } from 'vue'
 
 export const useVisitHistoryStore = defineStore('visitHistory', () => {
   const history = ref([])
+  const activeItem = ref('graph')
 
+  const setActiveItem = (item) => {
+    activeItem.value = item
+  }
   const addRecord = (record) => {
     // 去重处理
     const exists = history.value.some(item =>
@@ -25,6 +29,12 @@ export const useVisitHistoryStore = defineStore('visitHistory', () => {
       }
     }
   }
+  const removeRecord = (id) => {
+    history.value = history.value.filter(item => item.id !== id);
+  };
 
-  return { history, addRecord }
+  const clearAll = () => {
+    history.value = [];
+  };
+  return { history,activeItem,  addRecord,removeRecord, clearAll, setActiveItem }
 })

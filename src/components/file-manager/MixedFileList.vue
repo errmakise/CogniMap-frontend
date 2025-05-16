@@ -19,7 +19,7 @@
           {{ row.isFolder ? '文件夹' : getTypeName(row.type) }}
         </template>
       </el-table-column>
-      <el-table-column label="创建日期" width="300" prop="createTime">
+      <el-table-column label="更新日期" width="300" prop="createTime">
         <template #default="{ row }">
           {{ formatDate(row.lastTime) }}
         </template>

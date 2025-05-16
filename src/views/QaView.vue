@@ -8,13 +8,13 @@
       </div>
 
       <div v-for="(conv, index) in conversations" :key="index" class="conversation-item"
-      :class="{ 'active-conversation': currentConversationIndex === index }"
-      @mouseenter="hoveredIndex = index" @mouseleave="hoveredIndex = -1">
+        :class="{ 'active-conversation': currentConversationIndex === index }" @mouseenter="hoveredIndex = index"
+        @mouseleave="hoveredIndex = -1">
         <div class="conv-content" @click="selectConversation(index)">
           {{ conv.title || '新对话' }}
         </div>
         <el-dropdown>
-          <div class="more-actions" v-if="hoveredIndex === index||currentConversationIndex === index">
+          <div class="more-actions" v-if="hoveredIndex === index || currentConversationIndex === index">
             <el-icon>
               <MoreFilled />
             </el-icon>
@@ -41,22 +41,50 @@
 
     <!-- 主问答区域 -->
     <div class="qa-main">
-      <div class="messages-container">
-        <div v-for="(msg, idx) in (tempConversation || currentConversation).messages" :key="idx" class="message"
-          :class="msg.role">
-          <div class="message-content">{{ msg.content }}</div>
+      <el-scrollbar class="messages-container">
+
+        <div v-for="(msg, idx) in currentConversation.messages" :key="idx" class="message" :class="msg.role">
+          <div v-if="!msg.recommendation" class="message-content">{{ msg.content }}</div>
+
+          <div v-else class="dialog-container">
+            <div class="left-panel">
+              <el-table :data="currentKnowledgeList(msg)" style="width: 100%" height="100%" border
+                allow-drag-last-column="false" :header-cell-style="{ background: '#f5f7fa', color: '#606266' }">
+                <el-table-column prop="point" label="知识点" width="100" align="center" />
+                <el-table-column prop="reason" label="推荐理由" align="center" width="380" />
+                <el-table-column label="" align="center" width="50">
+                  <template #default="scope">
+                    <AddInQa @click="addKnowledge(scope.row)" />
+                  </template>
+                </el-table-column>
+              </el-table>
+            </div>
+            <div class="right-panel">
+              <!-- 切换按钮组 -->
+              <div class="switch-buttons">
+                <div class="custom-vertical-btn" :class="{ 'active-btn': activeTab === 'prerequisiteKnowledge' }"
+                  @click="switchTab('prerequisiteKnowledge')">
+                  <span>前</span>
+                  <span>置</span>
+                </div>
+                <div class="custom-vertical-btn" :class="{ 'active-btn': activeTab === 'postrequisiteKnowledge' }"
+                  @click="switchTab('postrequisiteKnowledge')">
+                  <span>拓</span>
+                  <span>展</span>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
-      </div>
+      </el-scrollbar>
 
+        <!-- 输入区域 -->
+        <div class="input-area">
+          <input v-model="userInput" class="input-field" placeholder="输入您的问题..." @keyup.enter="submitQuestion">
+          </input>
+          <el-button type="primary" @click="submitQuestion">发送</el-button>
+        </div>
 
-
-      <!-- 输入区域 -->
-      <div class="input-area">
-
-        <input v-model="userInput" class="input-field" placeholder="输入您的问题..." @keyup.enter="submitQuestion">
-        </input>
-        <el-button type="primary" @click="submitQuestion">发送</el-button>
-      </div>
     </div>
   </div>
 </template>
@@ -71,20 +99,24 @@ import {
 } from '@/api'
 
 const conversations = ref([
-  {
-    title: '初始对话',
-    messages: [
-      { role: 'assistant', content: '您好，请问有什么可以帮助您的？' }
-    ]
-  }
 ])
 
-const currentConversationIndex = ref(0)
+const currentConversationIndex = ref(-1)
 const hoveredIndex = ref(-1)
 const userInput = ref('')
-const showIntentSelector = ref(false)
 
-const currentConversation = computed(() => conversations.value[currentConversationIndex.value])
+
+
+const currentConversation = computed(() => {
+  if (currentConversationIndex.value >= 0) {
+    return conversations.value[currentConversationIndex.value]
+  }
+  return {
+    title: `新对话 ${conversations.value.length + 1}`,
+    messages: [{ role: 'assistant', content: '您好，请问有什么可以帮助您的？' }]
+  }
+})
+
 
 
 const getQuestionDetail = async (id) => {
@@ -100,34 +132,25 @@ const getQuestionDetail = async (id) => {
 
 const selectConversation = async (index) => {
   currentConversationIndex.value = index
+
+
   console.log("当前对话", conversations.value[index])
   if (conversations.value[index].id) {
     const content = await getQuestionDetail(conversations.value[index].id)
-    conversations.value[index]={
+    conversations.value[index] = {
       ...conversations.value[index],
-      messages: content.map(msg => ({
-        role: msg.role,
-        content: msg.content,
-        recomemdation: {
-        ...msg.recomemdation,
-        }
-      }))
+      messages: content
     }
   }
 }
 
-const tempConversation = ref(null) // 临
+
+
+
 const startNewConversation = () => {
-  tempConversation.value = {
-    title: `新对话 ${conversations.value.length + 1}`,
-    id: null,
-    userId: null,
-    createTime: null,
-    updateTime: null,
-    messages: []
-  }
+  console.log("开始新对话")
   // 设置为当前对话
-  currentConversation.value = tempConversation.value
+  currentConversationIndex.value = -1
   userInput.value = ''
 }
 
@@ -155,14 +178,14 @@ const createNewConversation = async () => {
   try {
     const response = await createQuestion();
     console.log("创建新对话", response)
-    tempConversation.value = {
+    const tempConversation = ref({
       ...response,
       messages: []
-    }
+    })
 
     conversations.value.push(tempConversation.value)
     currentConversationIndex.value = conversations.value.length - 1
-    tempConversation.value = null
+
   } catch (error) {
     console.error('创建新对话失败', error)
   }
@@ -173,13 +196,13 @@ const createNewConversation = async () => {
 const submitQuestion = async () => {
   if (!userInput.value.trim()) return
 
-  if (tempConversation.value) {
+  if (currentConversationIndex.value < 0) {
     await createNewConversation()
   }
   const question = userInput.value
   userInput.value = ''
 
-  console.log("当前对话", currentConversation.value,"question",question)
+  console.log("当前对话", currentConversation.value, "question", question)
 
 
   // 添加用户问题
@@ -193,16 +216,12 @@ const submitQuestion = async () => {
 
   try {
     const response = await updateQuestion(currentConversation.value.id, question)
-    currentConversation.value.messages.push({
-      role: 'assistant',
-      content: response.answer
-    })
     console.log("回复内容", response)
     // 添加助手回复
     currentConversation.value.messages.push({
       role: 'assistant',
-      content: response.answer,
-      recomemdation: {
+      content: '',
+      recommendation: {
         ...response,
       }
     })
@@ -241,13 +260,74 @@ const getQuestionHistory = async () => {
 
 onMounted(async () => {
   await getQuestionHistory()
-  if (conversations.value.length > 0) {
-    await selectConversation(0);
-  }
+  startNewConversation()
 })
+
+const activeTab = ref('prerequisiteKnowledge')
+
+const currentKnowledgeList = (msg) => {
+  if (!msg.recommendation) return []
+  return msg.recommendation[activeTab.value] || []
+}
+
+const switchTab = (tab) => {
+  activeTab.value = tab
+}
 </script>
 
 <style scoped>
+.custom-vertical-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0 10px 10px 0px;
+  padding: 10px 10px;
+  margin-bottom: 2px;
+  font-size: 14px;
+  cursor: pointer;
+  background-color: transparent;
+  color: #606266;
+  transition: all 0.3s;
+  background-color: #F2F2F2;
+}
+
+.custom-vertical-btn:hover {
+  background-color: #d8e7ff;
+}
+
+.custom-vertical-btn.active-btn {
+  background-color: #409eff;
+  color: white;
+}
+
+.custom-vertical-btn span {
+  line-height: 1;
+  margin: 2px 0;
+}
+
+.dialog-container {
+  display: flex;
+  font-family: "Helvetica Neue", Helvetica, "PingFang SC", "Hiragino Sans GB", Arial, sans-serif;
+}
+
+
+
+.right-panel {
+  position: relative;
+  box-sizing: border-box;
+}
+
+.switch-buttons {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  margin-bottom: 20px;
+}
+
+
+
+
 .create-button {
   border: 1px solid #afafaf;
   border-radius: 15px;
@@ -261,6 +341,7 @@ onMounted(async () => {
   cursor: pointer;
   margin-bottom: 2vh;
 }
+
 
 .create-button:hover {
   background-color: #fafafa;
@@ -292,6 +373,7 @@ onMounted(async () => {
 .conversation-item:hover {
   background-color: #eeeeee;
 }
+
 .conversation-item.active-conversation {
   background-color: #e0e0e0;
   font-weight: 500;
@@ -327,6 +409,7 @@ onMounted(async () => {
   padding: 10px 15px;
   border-radius: 8px;
   max-width: 60%;
+  width: fit-content;
 }
 
 .message.user {
@@ -336,10 +419,10 @@ onMounted(async () => {
 
 .message.assistant {
   margin-right: auto;
-  background-color: #f1f1f1;
 }
 
 .input-area {
+
   margin: 30px 5vw;
   padding: 15px 25px;
   display: flex;
@@ -347,7 +430,7 @@ onMounted(async () => {
   justify-content: space-between;
   background-color: #F5F5F5;
   border-radius: 15px;
-
+  margin-top: auto;
 }
 
 .input-field {

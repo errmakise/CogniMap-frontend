@@ -12,6 +12,7 @@ declare module 'vue' {
     3: typeof import('./src/components/icons/Fork copy 3.vue')['default']
     Account: typeof import('./src/components/icons/Account.vue')['default']
     AddFile: typeof import('./src/components/icons/AddFile.vue')['default']
+    AddInQa: typeof import('./src/components/icons/AddInQa.vue')['default']
     AddNodePopup: typeof import('./src/components/AddNodePopup.vue')['default']
     AddRound: typeof import('./src/components/icons/AddRound.vue')['default']
     BackGround: typeof import('./src/components/icons/BackGround.vue')['default']

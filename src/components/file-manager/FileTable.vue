@@ -10,7 +10,7 @@
           </div>
         </template>
       </el-table-column>
-      <el-table-column label="创建日期" width="400" prop="createTime">
+      <el-table-column label="更新日期" width="400" prop="createTime">
         <template #default="{ row }">
           {{ formatDate(row.lastTime) }}
         </template>

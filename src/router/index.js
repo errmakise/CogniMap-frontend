@@ -11,6 +11,12 @@ const router = createRouter({
       meta: { requiresAuth: true }
     },
     {
+      path: '/md/:id',
+      name: 'markdown',
+      component: () => import('@/views/MarkdownEditor.vue'),
+      meta: { title: 'Markdown编辑器' }
+    },
+    {
       path: '/graph/:graphId',
       //path:'/',
       name: 'graph-edit',

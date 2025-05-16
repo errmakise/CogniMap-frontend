@@ -81,7 +81,16 @@ const handleItemClick = (item) => {
       name: item.name,
       type: item.type,
     })
+    visitHistory.setActiveItem(item.id)
     router.push(`/graph/${item.id}`)
+  }else if (item.type === 1) {
+    visitHistory.addRecord({
+      id: item.id,
+      name: item.name,
+      type: item.type,
+    })
+    visitHistory.setActiveItem(item.id)
+    router.push(`/md/${item.id}`)
   }
 }
 

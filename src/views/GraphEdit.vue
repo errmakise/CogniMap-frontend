@@ -87,7 +87,8 @@ import { useDownloadHistoryStore } from '@/stores/downloadHistory'
 import { ipcRenderer } from 'electron'
 import path from 'path'
 import {
-  fetchGraphDetail,
+  fetchGraphNodes,
+  fetchGraphLinks,
   updateGraphNode,
   createGraphNode,
   deleteGraphNode,
@@ -107,7 +108,9 @@ const props = defineProps({
 // 模拟数据 - 替换API调用
 const mockNodes = [
   {
-    name: '人工智能', symbolSize: 10, id: '1', description: '模拟AI节点数据',
+    name: '人工智能', symbolSize: 10, id: '1',
+    description: '模拟AI节点数据',
+
     // 基础属性结束，以下是需要按需加载的字段
     _detailLoaded: false,
     _loading: false
@@ -138,17 +141,31 @@ const mockLinks = [
   { source: '3', target: '4', id: '3' }
 ]
 
-// 模拟API获取数据函数
+
 const fetchGraphData = async () => {
   try {
-    const res = await fetchGraphDetail(props.graphId)
-    return {
-      nodes: res.map(node => ({
+    const graphData = { nodes: [], links: [] }
+
+    const nodesRes = await fetchGraphNodes(props.graphId)
+
+    console.log('获取图谱node成功', nodesRes)
+    if (nodesRes.length > 0) {
+      graphData.nodes = nodesRes.map(node => ({
         ...node,
         _detailLoaded: false,
         _loading: false
       }))
     }
+
+    const linksRes = await fetchGraphLinks(props.graphId)
+    console.log('获取图谱link成功', linksRes)
+    if (linksRes.length > 0) {
+      graphData.links = linksRes.map(link => ({
+        ...link,
+        _loading: false
+      }))
+    }
+    return graphData
   } catch (error) {
     console.error('获取图谱数据失败', error)
     return { nodes: [], links: [] }
@@ -456,18 +473,21 @@ const resetForm = () => {
   currentNodeId.value = null;
 };
 
-// 修改createNewNode方法
+// 创建或更新节点
 const createNewNode = async () => {
   try {
     if (isEditMode.value) {
-      await updateGraphNode(currentNodeId.value, {
+      const res=await updateGraphNode(currentNodeId.value, {
         name: newNodeForm.value.name,
         description: newNodeForm.value.description,
-        fileIds: selectedFiles.value.map(f => f.id),
-        fileNames: selectedFiles.value.map(f => f.label),
+        files: selectedFiles.value.map(f => ({
+          fileId: f.id,
+          name: f.label
+        })),
         size: 10,
         color: "#000000"
       })
+      console.log('update操作成功:', res);
       console.log('currentNodeId', currentNodeId.value);
       // 更新现有节点数据
       const nodeIndex = chatOptions.value.series[0].data.findIndex(n => n.id === currentNodeId.value);
@@ -475,6 +495,7 @@ const createNewNode = async () => {
       if (nodeIndex !== -1) {
         chatOptions.value.series[0].data[nodeIndex] = {
           ...chatOptions.value.series[0].data[nodeIndex],
+
           name: newNodeForm.value.name,
           description: newNodeForm.value.description,
           files: selectedFiles.value.map(file => ({
@@ -485,25 +506,23 @@ const createNewNode = async () => {
       }
     } else {
       // 调用创建节点API
-      // const newNode = await creatNode({
-      //   name: newNodeForm.value.name,
-      //   description: newNodeForm.value.description,
-      //   files: selectedFiles.value.map(f => f.id),
-      //   graphId: props.graphId
-      // });
-
-      const newNode = await createGraphNode({
+      console.log(selectedFiles.value)
+      const newNode = await createGraphNode(props.graphId, {
         name: newNodeForm.value.name,
         description: newNodeForm.value.description,
-        files: selectedFiles.value.map(f => f.id),
-        graphId: props.graphId,
+        files: selectedFiles.value.map(file => ({
+          name: file.label,
+          fileId: file.id
+        })),
         size: 10,
         color: "#000000"
       })
-
+console.log('newNode', newNode)
       // 添加到图表数据
       chatOptions.value.series[0].data.push({
         ...newNode,
+        _detailLoaded: false,
+        _loading: false,
         symbolSize: 10 //注意
       });
     }
@@ -511,7 +530,7 @@ const createNewNode = async () => {
     // 重置状态
     resetForm();
   } catch (error) {
-    console.error('操作失败:', error);
+    console.error('create操作失败:', error);
   }
 }
 
@@ -735,7 +754,7 @@ onMounted(async () => {
     });
 
 
-    chart.getZr().on('click', async(params) => {
+    chart.getZr().on('click', async (params) => {
       closePopup();
       console.log('点击事件', params);
 
@@ -752,7 +771,7 @@ onMounted(async () => {
           //   id: `${firstSelectedNode.value.id}-${nodeData.id}-${Date.now()}`
           // }
 
-          const newLink = await createGraphLink(props.graphId,{
+          const newLink = await createGraphLink(props.graphId, {
             node1: firstSelectedNode.value.id,
             node2: nodeData.id,
           })
