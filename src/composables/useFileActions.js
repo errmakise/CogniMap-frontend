@@ -1,4 +1,4 @@
-import { deleteFile, renameFile, moveFile, copyFile } from '@/api'
+import { deleteFile, deleteFolder, renameFile, renameFolder, moveFile, copyFile } from '@/api'
 import { ElMessage, ElMessageBox } from 'element-plus'
 
 export function useFileActions(currentFolderId, refreshFiles) {
@@ -13,11 +13,12 @@ export function useFileActions(currentFolderId, refreshFiles) {
       })
 
       if (file.isFolder) {
-        console.log('重命名文件夹')
+        const res = await renameFolder(file.id, newName, currentFolderId.value)
+        console.log('重命名文件夹成功', res)
       } else {
-        console.log('重命名文件')
         //await renameFile(file.id, newName, file.folderId)//待定，当前还没实现“获取所有图谱文件”这个api
-        await renameFile(file.id, newName, currentFolderId.value)
+        const res = await renameFile(file.id, newName, currentFolderId.value)
+        console.log('重命名文件成功', res)
       }
       ElMessage.success('重命名成功')
       refreshFiles()
@@ -54,12 +55,20 @@ export function useFileActions(currentFolderId, refreshFiles) {
   const handleDelete = async (file) => {
     try {
       await ElMessageBox.confirm(`确定删除 ${file.name}?`, '提示', { type: 'warning' })
-      await deleteFile(file.id)
+
+      if (file.isFolder) {
+        console.log('删除文件夹')
+        await deleteFolder(file.id)
+      } else {
+        console.log('删除文件')
+        await deleteFile(file.id)
+      }
       ElMessage.success('删除成功')
       refreshFiles()
     } catch (error) {
       if (error !== 'cancel') {
         ElMessage.error('删除失败')
+        console.error(error) // 打印错误信息以进行调试，也可以根据需要进行其他处理，比如显示错误消息给用户，或者记录错误日志等。
       }
     }
   }

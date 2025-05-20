@@ -27,9 +27,9 @@
 
     <div class="line main-font">{{ nodeInfo.description }}</div>
 
-    <div class="file-list">
+    <div class="file-list" v-if="file">
       <div class="file-item" @click="clickFile(file.fileId)" v-for="(file, index) in nodeInfo.files" :key="file.fileId">
-        <span class="main-font file-name">{{ file.name }}</span>
+        <span class="main-font file-name">{{ file.filename }}</span>
         <RightArrow />
       </div>
     </div>
@@ -59,8 +59,8 @@ const props = defineProps({
       updateTime: '2025.1.1',
       description: '描述内容',
       files: [
-        { name: '文件名1', fileId: '1' },
-        { name: '文件名2', fileId: '2' }
+        { filename: '文件名1', fileId: '1' },
+        { filename: '文件名2', fileId: '2' }
       ]
     })
   },

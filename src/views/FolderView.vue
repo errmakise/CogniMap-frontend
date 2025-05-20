@@ -35,7 +35,7 @@ import path from 'path'
 import { useFileOperations } from '@/composables/useFileOperations'
 import { useFileActions } from '@/composables/useFileActions'
 import { useVisitHistoryStore } from '@/stores/visitHistory'
-
+import { ElLoading } from 'element-plus'
 const visitHistory = useVisitHistoryStore()
 
 const route = useRoute()
@@ -54,13 +54,21 @@ const breadcrumb = computed(() => folderInfo.value?.path || [])
 // 文件操作功能
 
 const refreshFiles = async () => {
+  const loading = ElLoading.service({
+    lock: true,
+    text: '加载中...',
+    background: 'rgba(0, 0, 0, 0.7)'
+  });
   try {
     const res = await fetchFiles(currentFolderId.value)
+    console.log('文件列表', res)
     files.value = res.list || []
     folderInfo.value = res.folderInfo
   } catch (error) {
     files.value = []
     console.error('获取文件列表失败', error)
+  }finally {
+    loading.close()
   }
 }
 

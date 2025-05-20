@@ -1,5 +1,5 @@
 <template>
-  <div class="folder-list" v-if="folders.length">
+  <div class="folder-list" >
     <span class="title">文件夹</span>
     <el-row :gutter="15" class="list">
       <el-col v-for="folder in folders" :key="folder.id" :xs="12" :sm="8" :md="8" :lg="6">
@@ -17,6 +17,9 @@
         </div>
       </el-col>
     </el-row>
+    <div v-if="!folders.length" class="empty-placeholder">
+      <el-empty description="暂无文件夹" :image-size="100"/>
+    </div>
   </div>
 </template>
 
@@ -27,6 +30,14 @@ defineProps({
 </script>
 
 <style scoped>
+.empty-placeholder {
+  margin-top: 20px;
+  border: 1px dashed #dcdfe6;
+  border-radius: 15px;
+  padding: 40px;
+
+
+}
 .folder-list {
   margin-top: 40px;
   margin-bottom: 40px;

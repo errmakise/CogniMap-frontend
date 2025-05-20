@@ -29,6 +29,7 @@ declare module 'vue' {
     Ellipsis: typeof import('./src/components/icons/Ellipsis.vue')['default']
     FileActionsMenu: typeof import('./src/components/FileActionsMenu.vue')['default']
     FileList: typeof import('./src/components/file-manager/FileList.vue')['default']
+    FileSelectorDialog: typeof import('./src/components/FileSelectorDialog.vue')['default']
     FileTable: typeof import('./src/components/file-manager/FileTable.vue')['default']
     Folder: typeof import('./src/components/icons/Folder.vue')['default']
     FolderList: typeof import('./src/components/file-manager/FolderList.vue')['default']

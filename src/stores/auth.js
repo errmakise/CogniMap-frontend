@@ -18,7 +18,7 @@ export const useAuthStore = defineStore('auth', () => {
       })
       token.value = res.token
       userInfo.value = {
-        phone: res.phone,
+        phone: credentials.phone,
         userId: res.userId,
         username: res.username,
         avatar: res.avatar,

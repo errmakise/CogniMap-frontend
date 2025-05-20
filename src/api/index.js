@@ -33,7 +33,7 @@ export const deleteGraphNode = (id) => request.delete(`/graph/node/${id}`)
 export const createGraphLink = (id,data) => request.post(`/graph/${id}/relation`, data)
 export const deleteGraphLink = (id) => request.delete(`/graph/relation/${id}`)
 export const fetchGraphLinks = (id) => request.get(`/graph/${id}/relation`)
-
+export const fetchNodeDetails= (id) => request.get(`/graph/node/${id}`)
 
 // 文件相关API
 export const uploadFile = (data) => {
@@ -70,8 +70,13 @@ export const renameFile = (id, newName, folderId) =>
     name: newName,
     folderId,
   })
-
-export const deleteFile = (id) => request.delete(`/files/${id}`)
+export const renameFolder = (id, newName, folderId) =>
+  request.put(`/file/folder/${id}`, {
+    name: newName,
+    folderId,
+  })
+export const deleteFolder = (id) => request.delete(`/file/folder/${id}`)
+export const deleteFile = (id) => request.delete(`/file/file/${id}`)
 export const moveFile = (id, folderId, newName) =>
   request.put(`/file/file/${id}`, {
     name: newName,

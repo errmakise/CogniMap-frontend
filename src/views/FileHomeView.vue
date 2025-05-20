@@ -16,7 +16,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { fetchFiles } from '@/api'
-import { ElMessage, ElMessageBox } from 'element-plus'
+import { ElMessage, ElMessageBox,ElLoading } from 'element-plus'
 import { ipcRenderer } from 'electron'
 import path from 'path'
 import { useFileOperations } from '@/composables/useFileOperations'
@@ -46,6 +46,11 @@ const filteredFiles = computed(() => {
 })
 
 const refreshFiles = async () => {
+  const loading = ElLoading.service({
+    lock: true,
+    text: '加载中...',
+    background: 'rgba(0, 0, 0, 0.7)'
+  });
   try {
     const res = await fetchFiles(
       currentFolderId.value,
@@ -53,11 +58,14 @@ const refreshFiles = async () => {
       pagination.value.pageSize
     )
     files.value = res.list || []
+    console.log('获取文件列表', files.value)
   } catch (error) {
     files.value = []
     ElMessage.error('获取文件列表失败')
+  }finally {
+    loading.close()
   }
-  console.log('获取文件列表', files.value)
+
 }
 
 // 文件操作功能
@@ -69,7 +77,7 @@ const {
 } = useFileActions(currentFolderId, refreshFiles)
 
 
-const { handleCreateCommand } = useFileOperations(currentFolderId)
+const { handleCreateCommand } = useFileOperations(currentFolderId,refreshFiles)
 
 
 
@@ -82,7 +90,7 @@ const handleFolderClick = (folder) => {
 }
 
 
-
+// 修改文件点击处理
 const handleFileClick = (file) => {
   console.log('点击文件', file)
   if (file.isFolder) {

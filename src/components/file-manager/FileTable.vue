@@ -1,7 +1,8 @@
 <template>
-  <div v-if="files.length">
+  <div >
     <span class="title">知识图谱</span>
-    <el-table :data="files" height="450" style="width: 100%;margin-top: 10px;">
+    <!-- height="450" -->
+    <el-table :data="files"  style="width: 100%;margin-top: 10px;">
       <el-table-column prop="name" label="名称" width="600" show-overflow-tooltip>
         <template #default="{ row }">
           <div class="file-item" @click="$emit('file-click', row)">
@@ -27,6 +28,7 @@
         </template>
       </el-table-column>
     </el-table>
+
   </div>
 </template>
 
@@ -42,6 +44,12 @@ const formatDate = (dateString) => {
 </script>
 
 <style scoped>
+.empty-placeholder {
+  margin-top: 20px;
+  border: 1px dashed #dcdfe6;
+  border-radius: 15px;
+  padding: 40px;
+}
 .title {
   font-size: 18px;
   font-weight: 600;

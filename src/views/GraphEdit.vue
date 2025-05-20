@@ -7,8 +7,8 @@
       @clickFile="handleClickFile" @clickEdit="handleClickEdit" />
     <!-- :loading="selectedNodeInfo.loading" -->
 
-    <GraphBottom class="bottom" v-model="sliderValue" :disable-delete="!hasSelection" @change="handleZoomChange"
-      @icon-click="handleIconClick" :disable-connect="!hasSelection" />
+    <GraphBottom class="bottom" v-model="sliderValue" :disable-delete="!selectedLink && !selectedNodeInfo.id"
+      @change="handleZoomChange" @icon-click="handleIconClick" :disable-connect="!selectedNodeInfo.id" />
     <!-- 搜索对话框 -->
     <el-dialog v-model="searchVisible" title="搜索节点" width="30%">
       <el-input v-model="searchKeyword" placeholder="输入节点名称" @keyup.enter="performSearch" />
@@ -50,15 +50,40 @@
       </template>
     </el-dialog>
 
-    <!-- 删除节点弹窗 -->
-    <el-dialog v-model="showFileDialog" title="选择关联文件" width="40%" top="20vh">
+    <!-- 选择文件对话框 -->
+    <!-- <el-dialog v-model="showFileDialog" title="选择关联文件" width="40%" top="20vh">
       <el-tree :data="fileTreeData" :props="{ label: 'label', children: 'children' }" @node-click="handleFileSelect"
         :highlight-current="false" node-key="id" :show-checkbox="true" :check-strictly="true" />
       <template #footer>
         <el-button @click="showFileDialog = false">取消</el-button>
         <el-button type="primary" @click="showFileDialog = false">确定</el-button>
       </template>
+    </el-dialog> -->
+    <el-dialog v-model="showFileDialog" title="选择关联文件" width="40%" top="20vh">
+      <el-tree :data="fileTreeData" :props="{ label: 'label', children: 'children' }"
+        :filter-node-method="filterFileNode" node-key="id" show-checkbox check-strictly :default-expand-all="true"
+        @check-change="handleFileCheckChange" ref="fileTreeRef">
+        <template #default="{ node }">
+          <span v-if="node.data.isFolder">
+            <el-icon>
+              <Folder />
+            </el-icon>
+            <span style="margin-left: 6px">{{ node.label }}</span>
+          </span>
+          <span v-else>
+            <el-icon>
+              <Document />
+            </el-icon>
+            <span style="margin-left: 6px">{{ node.label }}</span>
+          </span>
+        </template>
+      </el-tree>
+      <template #footer>
+        <el-button @click="showFileDialog = false">取消</el-button>
+        <el-button type="primary" @click="confirmFileSelection">确定</el-button>
+      </template>
     </el-dialog>
+
 
     <!-- 右键菜单 -->
     <div v-if="contextMenuVisible" class="context-menu" :style="{
@@ -70,7 +95,7 @@
         <span>编辑</span>
       </div>
 
-      <div class="menu-item" @click="handleConnect" :class="{ disabled: !hasSelection }">
+      <div class="menu-item" @click="handleConnect" :class="{ disabled: !selectedNodeInfo.id }">
         <Connect size="16" />
         <span>连线</span>
       </div>
@@ -85,6 +110,7 @@
 <script setup>
 import { useDownloadHistoryStore } from '@/stores/downloadHistory'
 import { ipcRenderer } from 'electron'
+import { ElLoading, ElMessage } from 'element-plus';
 import path from 'path'
 import {
   fetchGraphNodes,
@@ -93,8 +119,12 @@ import {
   createGraphNode,
   deleteGraphNode,
   createGraphLink,
-  deleteGraphLink
+  deleteGraphLink,
+  fetchNodeDetails
 } from '@/api'
+import { color } from 'echarts'
+import { create } from 'domain'
+
 
 const downloadHistoryStore = useDownloadHistoryStore()
 
@@ -105,53 +135,74 @@ const props = defineProps({
   }
 })
 
-// 模拟数据 - 替换API调用
-const mockNodes = [
-  {
-    name: '人工智能', symbolSize: 10, id: '1',
-    description: '模拟AI节点数据',
 
-    // 基础属性结束，以下是需要按需加载的字段
-    _detailLoaded: false,
-    _loading: false
-  },
-  {
-    name: '机器学习', symbolSize: 10, id: '2', description: '模拟ML节点数据',
-    // 基础属性结束，以下是需要按需加载的字段
-    _detailLoaded: false,
-    _loading: false
-  },
-  {
-    name: '深度学习', symbolSize: 10, id: '3', description: '模拟DL节点数据',
-    // 基础属性结束，以下是需要按需加载的字段
-    _detailLoaded: false,
-    _loading: false
-  },
-  {
-    name: '神经网络', symbolSize: 10, id: '4', description: '模拟NN节点数据',
-    // 基础属性结束，以下是需要按需加载的字段
-    _detailLoaded: false,
-    _loading: false
-  }
-]
 
-const mockLinks = [
-  { source: '1', target: '2', id: '1' },
-  { source: '2', target: '3', id: '2' },
-  { source: '3', target: '4', id: '3' }
-]
+const mockDataStore = ref({
+  nodes: [
+    {
+      id: '1',
+      name: '人工智能',
+      description: '模拟AI节点数据',
+      files: [],
+      symbolSize: 10,
+      _detailLoaded: true,
+      _loading: false,
+      createTime: '2025.1.1',
+      updateTime: '2025.1.1'
+    },
+    {
+      id: '2',
+      name: '机器学习',
+      description: '模拟ML节点数据',
+      files: [],
+      symbolSize: 10,
+      _detailLoaded: true,
+      _loading: false,
+      createTime: '2025.1.1',
+      updateTime: '2025.1.1'
+    }
+  ],
+  links: [
+    { source: '1', target: '2', id: 'link1' }
+  ]
+})
 
 
 const fetchGraphData = async () => {
+  // return {
+  //   nodes: mockDataStore.value.nodes.map(node => ({
+  //     ...node,
+  //     _detailLoaded: false,
+  //     _loading: false
+  //   })),
+  //   links: mockDataStore.value.links
+  // }
+
+
+  const graphData = { nodes: [], links: [] }
+  const loading = ElLoading.service({
+    lock: true,
+    text: '加载图谱信息中...',
+    background: 'rgba(0, 0, 0, 0.7)'
+  });
   try {
-    const graphData = { nodes: [], links: [] }
+
 
     const nodesRes = await fetchGraphNodes(props.graphId)
-
     console.log('获取图谱node成功', nodesRes)
+
+
+
     if (nodesRes.length > 0) {
       graphData.nodes = nodesRes.map(node => ({
         ...node,
+        createTime: formatDate(node.createTime),
+        updateTime: formatDate(node.updateTime),
+        description: node.description || '暂无描述',
+        files: node.fileId ? node.fileId.map((id, index) => ({
+          fileId: id,
+          filename: node.filename[index]
+        })) : [],
         _detailLoaded: false,
         _loading: false
       }))
@@ -159,9 +210,12 @@ const fetchGraphData = async () => {
 
     const linksRes = await fetchGraphLinks(props.graphId)
     console.log('获取图谱link成功', linksRes)
+
     if (linksRes.length > 0) {
       graphData.links = linksRes.map(link => ({
-        ...link,
+        source: String(link.node1), // 转换为字符串
+        target: String(link.node2),
+        id: link.id,
         _loading: false
       }))
     }
@@ -169,7 +223,14 @@ const fetchGraphData = async () => {
   } catch (error) {
     console.error('获取图谱数据失败', error)
     return { nodes: [], links: [] }
+  }finally {
+    loading.close();
   }
+}
+
+const formatDate = (dateString) => {
+  if (!dateString) return ''
+  return new Date(dateString).toLocaleString()
 }
 
 // 在现有状态变量后添加
@@ -217,29 +278,27 @@ const showNodePopup = async (nodeData, eventParams) => {
 
 
     // 如果未加载过详情，则请求数据
-    if (!nodeData._detailLoaded && !nodeData._loading) {
-      nodeData._loading = true;
-      try {
-        //const details = await fetchNodeDetails(nodeData.id);
-        const details = {
-          createTime: '2025.1.1',
-          updateTime: '2025.1.1',
+    // if (!nodeData._detailLoaded && !nodeData._loading) {
+    //   nodeData._loading = true;
+    //   try {
+    //     const res = await fetchNodeDetails(nodeData.id);
+    //     console.log('获取节点详情成功', res)
+    //     const details = {
+    //       createTime: formatDate(res.createTime),
+    //       updateTime: formatDate(res.updateTime),
 
-          description: '描述内容',
-          files: [
-            { name: '文件名1', fileId: '1' },
-            { name: '文件名2', fileId: '2' }
-          ]
-        }
-        Object.assign(nodeData, {
-          ...details,
-          _detailLoaded: true,
-          _loading: false
-        });
-      } catch (e) {
-        nodeData._loading = false;
-      }
-    }
+    //       description: res.description || '暂无描述',
+    //       files: res.files || []
+    //     }
+    //     Object.assign(nodeData, {
+    //       ...details,
+    //       _detailLoaded: true,
+    //       _loading: false
+    //     });
+    //   } catch (e) {
+    //     nodeData._loading = false;
+    //   }
+    // }
 
     selectedNodeInfo.value = {
       name: nodeData.name,
@@ -305,8 +364,7 @@ const chatOptions = ref({
         gravity: 0.1,
         friction: 0.9
       },
-      data: mockNodes,
-      links: mockLinks,
+
       roam: true,
       zoom: 1,
       scaleLimit: { min: 0.1, max: 5 },
@@ -338,8 +396,8 @@ const selectedNodeInfo = ref({
   updateTime: '2025.1.1',
   description: '描述内容',
   files: [
-    { name: '文件名1', fileId: '1' },
-    { name: '文件名2', fileId: '2' }
+    { filename: '文件名1', fileId: '1' },
+    { filename: '文件名2', fileId: '2' }
   ]
 });
 // 弹窗位置
@@ -376,6 +434,7 @@ const addToDownloadHistory = (filePath) => {
     time: new Date().toLocaleString(),
     dir: path.dirname(filePath)
   });
+  console.log('导出成功',downloadHistoryStore.history)
 };
 
 
@@ -446,9 +505,110 @@ const fileTreeData = ref([
 ])
 const selectedFiles = ref([])
 
+const fetchUserFiles = async () => {
+  const loading = ElLoading.service({
+    lock: true,
+    text: '加载中...',
+    background: 'rgba(0, 0, 0, 0.7)'
+  });
+  try {
+    //const response = await fetchUserMarkdownFiles() // 需要实现的API
+    const response = [
+      {
+        id: '1',
+        name: '笔记目录',
+        isFolder: true,
+        parentId: null
+      },
+      {
+        id: '2',
+        name: 'AI基础.md',
+        isFolder: false,
+        parentId: '1'
+      },
+      {
+        id: '1-2',
+        name: '深度学习',
+        isFolder: true,
+        parentId: '1'
+      },
+      {
+        id: '1-2-1',
+        name: '神经网络.md',
+        isFolder: false,
+        parentId: '1-2'
+      }
+
+    ]
+    fileTreeData.value = formatFileTree(response)
+  } catch (error) {
+    console.error('获取文件列表失败:', error)
+    ElMessage.error('获取文件列表失败')
+  }finally {
+    loading.close();
+  }
+}
+
+// 将扁平文件列表转换为树形结构
+const formatFileTree = (files) => {
+  const tree = []
+  const folderMap = {}
+
+  // 先处理文件夹
+  files.forEach(file => {
+    if (file.isFolder) {
+      folderMap[file.id] = {
+        id: file.id,
+        label: file.name,
+        type:-1,
+        children: []
+      }
+    }
+  })
+
+  // 处理文件
+  files.forEach(file => {
+    if (!file.isFolder) {
+      if (file.parentId && folderMap[file.parentId]) {
+        folderMap[file.parentId].children.push({
+          id: file.id,
+          label: file.name,
+          type:file.type
+        })
+      } else {
+        tree.push({
+          id: file.id,
+          label: file.name,
+          type:file.type
+        })
+      }
+    }
+  })
+
+  // 合并结果
+  Object.values(folderMap).forEach(folder => {
+    tree.push(folder)
+  })
+
+  return tree
+}
+
 // 添加文件选择方法
 const chooseFile = () => {
+  fetchUserFiles()
   showFileDialog.value = true
+}
+const fileTreeRef = ref(null)
+
+const confirmFileSelection = () => {
+  const checkedNodes = fileTreeRef.value.getCheckedNodes()
+  selectedFiles.value = checkedNodes
+    .filter(node => !node.children) // 只保留文件
+    .map(node => ({
+      id: node.id,
+      label: node.label
+    }))
+  showFileDialog.value = false
 }
 
 // 选择文件方法
@@ -475,15 +635,19 @@ const resetForm = () => {
 
 // 创建或更新节点
 const createNewNode = async () => {
+  const loading = ElLoading.service({
+    lock: true,
+    text: '加载中...',
+    background: 'rgba(0, 0, 0, 0.7)'
+  });
   try {
     if (isEditMode.value) {
-      const res=await updateGraphNode(currentNodeId.value, {
+      const res = await updateGraphNode(currentNodeId.value, {
         name: newNodeForm.value.name,
         description: newNodeForm.value.description,
-        files: selectedFiles.value.map(f => ({
-          fileId: f.id,
-          name: f.label
-        })),
+        fileId: selectedFiles.value.map(f => f.id),
+        filename: selectedFiles.value.map(f => f.label),
+
         size: 10,
         color: "#000000"
       })
@@ -499,7 +663,7 @@ const createNewNode = async () => {
           name: newNodeForm.value.name,
           description: newNodeForm.value.description,
           files: selectedFiles.value.map(file => ({
-            name: file.label,
+            filename: file.label,
             fileId: file.id
           }))
         };
@@ -510,20 +674,27 @@ const createNewNode = async () => {
       const newNode = await createGraphNode(props.graphId, {
         name: newNodeForm.value.name,
         description: newNodeForm.value.description,
-        files: selectedFiles.value.map(file => ({
-          name: file.label,
-          fileId: file.id
-        })),
+        // files: selectedFiles.value.map(file => ({
+        //   name: file.label,
+        //   fileId: file.id
+        // })),
+        fileId: selectedFiles.value.map(f => f.id),
+        filename: selectedFiles.value.map(f => f.label),
+
         size: 10,
         color: "#000000"
       })
-console.log('newNode', newNode)
+      console.log('newNode', newNode)
       // 添加到图表数据
       chatOptions.value.series[0].data.push({
         ...newNode,
         _detailLoaded: false,
         _loading: false,
-        symbolSize: 10 //注意
+        symbolSize: 10, //注意
+        files: selectedFiles.value.map(file => ({
+          filename: file.label,
+          fileId: file.id
+        }))
       });
     }
 
@@ -531,8 +702,31 @@ console.log('newNode', newNode)
     resetForm();
   } catch (error) {
     console.error('create操作失败:', error);
+  }finally {
+    loading.close();
   }
 }
+
+// const createNewNode = async () => {
+//   const newNodeId = `node-${Date.now()}`
+//   const newNode = {
+//     id: newNodeId,
+//     name: newNodeForm.value.name,
+//     description: newNodeForm.value.description,
+//     files: selectedFiles.value.map(f => ({
+//       fileId: f.id,
+//       name: f.label
+//     })),
+//     symbolSize: 10,
+//     _detailLoaded: true
+//   }
+
+//   mockDataStore.value.nodes.push(newNode)
+//   chatOptions.value.series[0].data.push(newNode)
+//   resetForm()
+// }
+
+
 
 // 搜索相关状态
 const searchVisible = ref(false)
@@ -598,18 +792,24 @@ const focusOnNode = (node, nodeIdx) => {
   showNodePopup(node, { offsetX: pixelPos[0], offsetY: pixelPos[1] })
 }
 
-import { ElMessage } from 'element-plus';
-import { color } from 'echarts'
+
 
 // 在现有状态变量后添加
 const selectedLink = ref(null) // 当前选中的连线
-const hasSelection = computed(() => !!selectedNodeInfo.value.id || !!selectedLink.value || isConnectingMode.value)
-const deleteConnection = () => {
+const hasSelection = computed(() => !!selectedNodeInfo.value.id || !!selectedLink.value)
+
+
+const deleteConnection = async () => {
   if (!selectedLink.value) return;
+  const loading = ElLoading.service({
+    lock: true,
+    text: '加载中...',
+    background: 'rgba(0, 0, 0, 0.7)'
+  });
   try {
     // 实际开发中调用API删除连线
-    // await deleteConnectionAPI(selectedNodeInfo.value.id);
-
+    const res = await deleteGraphLink(selectedLink.value.id);
+    console.log('删除连线成功', res)
     // 从图表数据中移除连线
     chatOptions.value.series[0].links = chatOptions.value.series[0].links.filter(
       link => link.id !== selectedLink.value.id
@@ -625,6 +825,8 @@ const deleteConnection = () => {
       offset: 80  // 保持位置一致
     });
     console.error('删除连线失败:', error);
+  }finally {
+    loading.close();
   }
 
 };
@@ -632,9 +834,14 @@ const deleteConnection = () => {
 // 删除节点
 const deleteNode = async () => {
   if (selectedNodeInfo.value.id) {
+    const loading = ElLoading.service({
+    lock: true,
+    text: '加载中...',
+    background: 'rgba(0, 0, 0, 0.7)'
+  });
     try {
-      //await deleteGraphNode(selectedNodeInfo.value.id)
-
+      const res = await deleteGraphNode(selectedNodeInfo.value.id)
+      console.log('删除节点成功', res)
       // 从图表数据中移除节点
       const index = chatOptions.value.series[0].data.findIndex(
         n => n.id === selectedNodeInfo.value.id
@@ -642,9 +849,14 @@ const deleteNode = async () => {
       if (index !== -1) {
         chatOptions.value.series[0].data.splice(index, 1);
         // 同时移除相关连线
-        chatOptions.value.series[0].links = chatOptions.value.series[0].links.filter(
-          link => link.source !== selectedNodeInfo.value.id && link.target !== selectedNodeInfo.value.id
-        );
+        // chatOptions.value.series[0].links = chatOptions.value.series[0].links.filter(
+        //   link => link.source !== selectedNodeInfo.value.id && link.target !== selectedNodeInfo.value.id
+        // );
+        if (res && Array.isArray(res)) {
+          chatOptions.value.series[0].links = chatOptions.value.series[0].links.filter(
+            link => !res.includes(link.id) // 过滤掉返回的关系ID
+          );
+        }
       }
       closePopup();
       ElMessage.success({
@@ -657,9 +869,28 @@ const deleteNode = async () => {
         offset: 80  // 保持位置一致
       });
       console.error('删除节点失败:', error);
+    }finally {
+      loading.close();
     }
   }
 }
+
+// const deleteNode = async () => {
+//   const nodeId = selectedNodeInfo.value.id
+//   mockDataStore.value.nodes = mockDataStore.value.nodes.filter(n => n.id !== nodeId)
+//   mockDataStore.value.links = mockDataStore.value.links.filter(
+//     link => link.source !== nodeId && link.target !== nodeId
+//   )
+
+//   // 更新图表
+//   chatOptions.value.series[0].data = chatOptions.value.series[0].data.filter(
+//     n => n.id !== nodeId
+//   )
+//   chatOptions.value.series[0].links = mockDataStore.value.links
+
+//   closePopup()
+//   ElMessage.success('节点删除成功')
+// }
 
 // 统一删除处理
 const handleDelete = () => {
@@ -740,6 +971,10 @@ onMounted(async () => {
   // 更新图表配置
   chatOptions.value.series[0].data = graphData.nodes
   chatOptions.value.series[0].links = graphData.links
+
+
+  console.log('chatOptions', chatOptions.value.series[0].links)
+  console.log('chatOptions node', chatOptions.value.series[0].data)
   const chart = chartRef.value?.chart;
   if (chart) {
     chart.getZr().on('contextmenu', handleNodeRightClick)
@@ -766,8 +1001,8 @@ onMounted(async () => {
         if (nodeData && nodeData.id !== firstSelectedNode.value.id) {
           // 创建新连线
           // const newLink = {
-          //   node1: firstSelectedNode.value.id,
-          //   node2: nodeData.id,
+          //   source: firstSelectedNode.value.id,
+          //   target: nodeData.id,
           //   id: `${firstSelectedNode.value.id}-${nodeData.id}-${Date.now()}`
           // }
 
@@ -775,7 +1010,12 @@ onMounted(async () => {
             node1: firstSelectedNode.value.id,
             node2: nodeData.id,
           })
-          chatOptions.value.series[0].links.push(newLink)
+          console.log('newLink', newLink)
+          chatOptions.value.series[0].links.push({
+            source: String(firstSelectedNode.value.id),
+            target: String(nodeData.id),
+            id: newLink
+          })
           ElMessage.success('连线创建成功')
         } else if (nodeData) {
           ElMessage.warning('不能连接同一个节点')
