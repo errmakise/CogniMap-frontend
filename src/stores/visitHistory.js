@@ -36,5 +36,12 @@ export const useVisitHistoryStore = defineStore('visitHistory', () => {
   const clearAll = () => {
     history.value = [];
   };
-  return { history,activeItem,  addRecord,removeRecord, clearAll, setActiveItem }
+
+  const updateRecordName = (id, newName) => {
+    const record = history.value.find(item => item.id === id)
+    if (record) {
+      record.name = newName
+    }
+  }
+  return { history,activeItem, updateRecordName, addRecord,removeRecord, clearAll, setActiveItem }
 })

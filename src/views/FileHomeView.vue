@@ -5,7 +5,7 @@
     <OperationToolbar @command="handleCreateCommand" @upload-click="showUploadDialog" />
 
 
-    <FileList :files="filteredFiles" :folders="folderList" @file-click="handleFileClick"
+    <FileList :files="graphs" :folders="folderList" @file-click="handleFileClick"
       @folder-click="handleFolderClick" @rename="handleRename" @delete="handleDelete" @move="handleMove"
       @copy="handleCreateCopy" @open="openContainingFolder" />
 
@@ -15,7 +15,7 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { fetchFiles } from '@/api'
+import { fetchFiles,fetchAllGraphs } from '@/api'
 import { ElMessage, ElMessageBox,ElLoading } from 'element-plus'
 import { ipcRenderer } from 'electron'
 import path from 'path'
@@ -26,6 +26,7 @@ import { useVisitHistoryStore } from '@/stores/visitHistory'
 
 // 状态管理
 const files = ref([])
+const graphs = ref([])
 const uploadVisible = ref(false)
 const currentFolderId = ref(0)
 const router = useRouter()
@@ -33,7 +34,8 @@ const visitHistory = useVisitHistoryStore()
 
 const pagination = ref({
   pageNo: 1,
-  pageSize: 10
+  pageSize: 10,
+  total: 0
 })
 
 
@@ -58,14 +60,34 @@ const refreshFiles = async () => {
       pagination.value.pageSize
     )
     files.value = res.list || []
+    pagination.value.total = res.total || 0
     console.log('获取文件列表', files.value)
+
+    // 加载知识图谱
+    const res2 = await fetchAllGraphs()
+    graphs.value = res2.list?.map(item => (
+      {
+        id: item.fileId,
+        name: item.fileName,
+        type: 0,
+        isFolder: 0,
+        lastTime: item.createTime,
+      }
+    ))
+    console.log('获取知识图谱', graphs)
   } catch (error) {
     files.value = []
+    graphs.value = []
     ElMessage.error('获取文件列表失败')
   }finally {
     loading.close()
   }
 
+}
+
+const handlePageChange = (page) => {
+  pagination.value.pageNo = page
+  refreshFiles()
 }
 
 // 文件操作功能

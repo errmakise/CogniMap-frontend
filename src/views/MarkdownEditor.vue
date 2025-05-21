@@ -1,11 +1,6 @@
 <template>
   <div class="editor-container">
-    <v-md-editor
-      v-model="content"
-      height="calc(100vh - 60px)"
-      :disabled-menus="[]"
-      @upload-image="handleUploadImage"
-    />
+    <v-md-editor v-model="content" height="calc(100vh - 60px)" :disabled-menus="[]" @upload-image="handleUploadImage" />
     <div class="editor-footer">
       <el-button type="primary" @click="saveContent">保存</el-button>
     </div>
@@ -28,17 +23,17 @@ VMdEditor.use(githubTheme)
 const route = useRoute()
 const fileId = route.params.id
 const content = ref('')
+const title = ref('')
 
 const loadFileContent = async () => {
   try {
     const res = await fetchMdFile(fileId)
-
+    console.log('文档响应', res)
     if (res) {
-      console.log(res)
-      const contentRes = await axios.get(res.contentUrl)
-      content.value = contentRes.data
-      console.log(content.value)
+      content.value = res
     }
+
+
   } catch (error) {
     ElMessage.error('获取文件内容失败')
     console.error(error)
@@ -50,14 +45,9 @@ const loadFileContent = async () => {
 // 保存文件内容
 const saveContent = async () => {
   try {
-    const blob = new Blob([content.value], { type: 'text/markdown' })
-    const file = new File([blob], `${fileId}.md`, { type: 'text/markdown' })
-
-    const formData = new FormData()
-    formData.append('file', file)
-    formData.append('id', fileId)
-
-    await updateMdFile(fileId, formData)
+    console.log(fileId)
+    const res = await updateMdFile(fileId, content.value, null)
+    console.log('保存响应', res)
     ElMessage.success('保存成功')
   } catch (error) {
     ElMessage.error('保存失败')

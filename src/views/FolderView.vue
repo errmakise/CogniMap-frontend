@@ -8,28 +8,18 @@
     </el-breadcrumb>
 
     <!-- 操作工具栏 -->
-    <OperationToolbar
-      @command="handleCreateCommand"
-      @upload-click="showUploadDialog"
-    />
+    <OperationToolbar @command="handleCreateCommand" @upload-click="showUploadDialog" />
 
     <!-- 混合文件列表 -->
-    <MixedFileList
-      :items="allItems"
-      @item-click="handleItemClick"
-      @rename="handleRename"
-      @delete="handleDelete"
-      @move="handleMove"
-      @copy="handleCreateCopy"
-      @open="openContainingFolder"
-    />
+    <MixedFileList :items="allItems" @item-click="handleItemClick" @rename="handleRename" @delete="handleDelete"
+      @move="handleMove" @copy="handleCreateCopy" @open="openContainingFolder" />
   </div>
 </template>
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { fetchFiles } from '@/api'
+import { fetchFiles, getFilePath } from '@/api'
 import { ipcRenderer } from 'electron'
 import path from 'path'
 import { useFileOperations } from '@/composables/useFileOperations'
@@ -44,12 +34,12 @@ const router = useRouter()
 // 状态管理
 const currentFolderId = computed(() => route.params.folderId)
 const files = ref([])
-const folderInfo = ref(null)
 const uploadVisible = ref(false)
+const folderPath = ref([])
 
 // 计算属性
 const allItems = computed(() => files.value)
-const breadcrumb = computed(() => folderInfo.value?.path || [])
+const breadcrumb = computed(() => folderPath.value || [])
 
 // 文件操作功能
 
@@ -60,19 +50,24 @@ const refreshFiles = async () => {
     background: 'rgba(0, 0, 0, 0.7)'
   });
   try {
-    const res = await fetchFiles(currentFolderId.value)
-    console.log('文件列表', res)
-    files.value = res.list || []
-    folderInfo.value = res.folderInfo
+    const [filesRes, pathRes] = await Promise.all([
+      fetchFiles(currentFolderId.value),
+      getFilePath(currentFolderId.value)
+    ])
+    console.log('文件列表', filesRes)
+    console.log('文件路径', pathRes)
+    folderPath.value = pathRes
+    files.value = filesRes.list || []
+
   } catch (error) {
     files.value = []
     console.error('获取文件列表失败', error)
-  }finally {
+  } finally {
     loading.close()
   }
 }
 
-const { handleCreateCommand } = useFileOperations(currentFolderId,refreshFiles)
+const { handleCreateCommand } = useFileOperations(currentFolderId, refreshFiles)
 const {
   handleRename,
   handleMove,
@@ -82,7 +77,15 @@ const {
 
 const handleItemClick = (item) => {
   if (item.isFolder) {
-    router.push(`/files/folder/${item.id}`)
+    console.log('点击文件夹', item)
+    router.push({
+      name: 'folder',
+      params: { folderId: item.id },
+      force: true
+
+    })
+
+
   } else if (item.type === 0) {
     visitHistory.addRecord({
       id: item.id,
@@ -91,7 +94,7 @@ const handleItemClick = (item) => {
     })
     visitHistory.setActiveItem(item.id)
     router.push(`/graph/${item.id}`)
-  }else if (item.type === 1) {
+  } else if (item.type === 1) {
     visitHistory.addRecord({
       id: item.id,
       name: item.name,
@@ -103,7 +106,13 @@ const handleItemClick = (item) => {
 }
 
 const navigateTo = (index) => {
-  const targetId = breadcrumb.value[index].id
+  console.log('navigateTo', index)
+  const targetId = folderPath.value[index].id
+  if (targetId === currentFolderId.value) return
+  if (targetId === 0) {
+    router.push({ name: 'files' })
+    return
+  }
   router.push(`/files/folder/${targetId}`)
 }
 

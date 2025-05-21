@@ -1,7 +1,9 @@
 import { deleteFile, deleteFolder, renameFile, renameFolder, moveFile, copyFile } from '@/api'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import { useVisitHistoryStore } from '@/stores/visitHistory'
 
 export function useFileActions(currentFolderId, refreshFiles) {
+  const visitHistory = useVisitHistoryStore()
   const handleRename = async (file) => {
     try {
       const { value: newName } = await ElMessageBox.prompt('请输入新名称', '重命名', {
@@ -18,13 +20,16 @@ export function useFileActions(currentFolderId, refreshFiles) {
       } else {
         //await renameFile(file.id, newName, file.folderId)//待定，当前还没实现“获取所有图谱文件”这个api
         const res = await renameFile(file.id, newName, currentFolderId.value)
+        visitHistory.updateRecordName(file.id, newName)
         console.log('重命名文件成功', res)
+
       }
       ElMessage.success('重命名成功')
       refreshFiles()
     } catch (error) {
       if (error !== 'cancel') {
         ElMessage.error('重命名失败')
+        console.error(error)
       }
     }
   }

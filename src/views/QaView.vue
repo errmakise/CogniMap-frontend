@@ -430,7 +430,7 @@ const formatFileTree = (files) => {
   const tree = []
   const nodeMap = {}
 
-  // 第一遍：创建所有节点
+  //创建所有节点
   files.forEach(file => {
     nodeMap[file.id] = {
       id: file.id,
@@ -441,7 +441,7 @@ const formatFileTree = (files) => {
     }
   })
 
-  // 第二遍：建立父子关系
+  //建立父子关系
   files.forEach(file => {
     const node = nodeMap[file.id]
     if (file.parentId && nodeMap[file.parentId]) {

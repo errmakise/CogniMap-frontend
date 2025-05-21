@@ -86,6 +86,15 @@ export const exportGraph = (id) => request.get(`/files/${id}/export`, { response
 export const createCopy = (id) => request.post(`/files/${id}/copy`)
 export const copyFile = (id, newPath) => request.post(`/files/${id}/copy`, { newPath })
 
+export const getFilePath = (id) => request.get(`/file/path/${id}`)
+export const fetchAllGraphs = (pageNo = 1, pageSize = 10) => request.get('/file/graph',{
+  params: {
+    pageNo,
+    pageSize,
+  },
+})
+
+
 //问答相关API
 export const fetchQuestionsList = () =>
   request.get('/agent')
@@ -100,8 +109,7 @@ export const updateQuestion = (id, question) => request.post(`/agent/${id}`, {qu
 
 
 export const fetchMdFile = (id) => request.get(`/file/file/${id}`)
-export const updateMdFile = (id, formData) => request.post(`/file/file/${id}`, formData, {
-  headers: {
-    'Content-Type': 'multipart/form-data'
-  }
+export const updateMdFile = (id, content,title) => request.post(`/file/file/${id}`,{
+  content,
+  title,
 })

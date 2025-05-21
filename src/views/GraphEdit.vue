@@ -406,6 +406,112 @@ const popupPosition = ref([0, 0]);
 
 
 
+
+
+
+
+
+// 处理文件点击事件
+const handleClickFile = (fileId) => {
+  console.log('点击了文件:', fileId);
+};
+
+const isEditMode = ref(false) // 区分是编辑还是创建
+const currentNodeId = ref(null) // 当前编辑的节点ID
+// 编辑节点
+const handleClickEdit = () => {
+  console.log('点击了编辑', selectedNodeInfo.value);
+  closePopup();
+  showCreateDialog.value = true;
+  isEditMode.value = true;
+  currentNodeId.value = selectedNodeInfo.value.id;
+  console.log('currentNodeId', currentNodeId.value);
+  newNodeForm.value = {
+    name: selectedNodeInfo.value.name,
+    description: selectedNodeInfo.value.description,
+    files: selectedNodeInfo.value.files
+  };
+  selectedFiles.value = selectedNodeInfo.value.files.map(file => ({
+    id: file.fileId,
+    label: file.name
+  }));
+};
+
+// 创建或更新节点
+const createNewNode = async () => {
+  const loading = ElLoading.service({
+    lock: true,
+    text: '加载中...',
+    background: 'rgba(0, 0, 0, 0.7)'
+  });
+  try {
+    if (isEditMode.value) {
+      const res = await updateGraphNode(currentNodeId.value, {
+        name: newNodeForm.value.name,
+        description: newNodeForm.value.description,
+        fileId: selectedFiles.value.map(f => f.id),
+        filename: selectedFiles.value.map(f => f.label),
+
+        size: 10,
+        color: "#000000"
+      })
+      console.log('update操作成功:', res);
+      console.log('currentNodeId', currentNodeId.value);
+      // 更新现有节点数据
+      const nodeIndex = chatOptions.value.series[0].data.findIndex(n => n.id === currentNodeId.value);
+      console.log('nodeIndex', nodeIndex);
+      if (nodeIndex !== -1) {
+        chatOptions.value.series[0].data[nodeIndex] = {
+          ...chatOptions.value.series[0].data[nodeIndex],
+
+          name: newNodeForm.value.name,
+          description: newNodeForm.value.description,
+          files: selectedFiles.value.map(file => ({
+            filename: file.label,
+            fileId: file.id
+          }))
+        };
+      }
+    } else {
+      // 调用创建节点API
+      console.log(selectedFiles.value)
+      const newNode = await createGraphNode(props.graphId, {
+        name: newNodeForm.value.name,
+        description: newNodeForm.value.description,
+        // files: selectedFiles.value.map(file => ({
+        //   name: file.label,
+        //   fileId: file.id
+        // })),
+        fileId: selectedFiles.value.map(f => f.id),
+        filename: selectedFiles.value.map(f => f.label),
+
+        size: 10,
+        color: "#000000"
+      })
+      console.log('newNode', newNode)
+      // 添加到图表数据
+      chatOptions.value.series[0].data.push({
+        ...newNode,
+        _detailLoaded: false,
+        _loading: false,
+        symbolSize: 10, //注意
+        files: selectedFiles.value.map(file => ({
+          filename: file.label,
+          fileId: file.id
+        }))
+      });
+    }
+
+    // 重置状态
+    resetForm();
+  } catch (error) {
+    console.error('create操作失败:', error);
+  }finally {
+    loading.close();
+  }
+}
+
+
 // 导出为 PNG
 const exportToPNG = async (chart) => {
   if (!chart) return;
@@ -436,46 +542,6 @@ const addToDownloadHistory = (filePath) => {
   });
   console.log('导出成功',downloadHistoryStore.history)
 };
-
-
-
-
-
-
-
-// 处理文件点击事件
-const handleClickFile = (fileId) => {
-  console.log('点击了文件:', fileId);
-};
-
-const isEditMode = ref(false) // 区分是编辑还是创建
-const currentNodeId = ref(null) // 当前编辑的节点ID
-// 编辑节点
-const handleClickEdit = () => {
-  console.log('点击了编辑', selectedNodeInfo.value.name);
-  closePopup();
-  showCreateDialog.value = true;
-  isEditMode.value = true;
-  currentNodeId.value = selectedNodeInfo.value.id;
-  newNodeForm.value = {
-    name: selectedNodeInfo.value.name,
-    description: selectedNodeInfo.value.description,
-    files: selectedNodeInfo.value.files
-  };
-  selectedFiles.value = selectedNodeInfo.value.files.map(file => ({
-    id: file.fileId,
-    label: file.name
-  }));
-};
-
-// 关闭弹窗
-const closePopup = () => {
-  console.log('关闭弹窗');
-  isPopupVisible.value = false;
-  selectedNodeInfo.value = {};
-  contextMenuVisible.value = false
-};
-
 
 const showCreateDialog = ref(false)
 const newNodeForm = ref({
@@ -633,79 +699,7 @@ const resetForm = () => {
   currentNodeId.value = null;
 };
 
-// 创建或更新节点
-const createNewNode = async () => {
-  const loading = ElLoading.service({
-    lock: true,
-    text: '加载中...',
-    background: 'rgba(0, 0, 0, 0.7)'
-  });
-  try {
-    if (isEditMode.value) {
-      const res = await updateGraphNode(currentNodeId.value, {
-        name: newNodeForm.value.name,
-        description: newNodeForm.value.description,
-        fileId: selectedFiles.value.map(f => f.id),
-        filename: selectedFiles.value.map(f => f.label),
 
-        size: 10,
-        color: "#000000"
-      })
-      console.log('update操作成功:', res);
-      console.log('currentNodeId', currentNodeId.value);
-      // 更新现有节点数据
-      const nodeIndex = chatOptions.value.series[0].data.findIndex(n => n.id === currentNodeId.value);
-      console.log('nodeIndex', nodeIndex);
-      if (nodeIndex !== -1) {
-        chatOptions.value.series[0].data[nodeIndex] = {
-          ...chatOptions.value.series[0].data[nodeIndex],
-
-          name: newNodeForm.value.name,
-          description: newNodeForm.value.description,
-          files: selectedFiles.value.map(file => ({
-            filename: file.label,
-            fileId: file.id
-          }))
-        };
-      }
-    } else {
-      // 调用创建节点API
-      console.log(selectedFiles.value)
-      const newNode = await createGraphNode(props.graphId, {
-        name: newNodeForm.value.name,
-        description: newNodeForm.value.description,
-        // files: selectedFiles.value.map(file => ({
-        //   name: file.label,
-        //   fileId: file.id
-        // })),
-        fileId: selectedFiles.value.map(f => f.id),
-        filename: selectedFiles.value.map(f => f.label),
-
-        size: 10,
-        color: "#000000"
-      })
-      console.log('newNode', newNode)
-      // 添加到图表数据
-      chatOptions.value.series[0].data.push({
-        ...newNode,
-        _detailLoaded: false,
-        _loading: false,
-        symbolSize: 10, //注意
-        files: selectedFiles.value.map(file => ({
-          filename: file.label,
-          fileId: file.id
-        }))
-      });
-    }
-
-    // 重置状态
-    resetForm();
-  } catch (error) {
-    console.error('create操作失败:', error);
-  }finally {
-    loading.close();
-  }
-}
 
 // const createNewNode = async () => {
 //   const newNodeId = `node-${Date.now()}`
@@ -920,49 +914,7 @@ const handleConnect = () => {
 
 
 
-// 处理图标点击事件
-const handleIconClick = (icon) => {
-  console.log('点击了图标:', icon);
-  const chart = chartRef.value?.chart;
 
-  switch (icon) {
-    case 'download':
-      console.log('下载');
-      exportToPNG(chart);
-      break;
-    case 'search':
-      searchVisible.value = true
-      console.log('搜索');
-      break;
-    case 'add':
-      showCreateDialog.value = true
-      console.log('添加');
-      break;
-    case 'delete':
-      handleDelete();
-      console.log('删除');
-      break;
-    case 'connect':
-      handleConnect();
-      console.log('连接');
-      break;
-    case 'cancel':
-      console.log('取消');
-      break;
-    default:
-      console.log('未知图标');
-      break;
-  }
-}
-
-
-const sliderValue = ref(100); // 初始值 100% (1x)
-// 缩放事件处理
-const handleZoomChange = (zoom) => {
-  console.log('缩放事件', zoom);
-  const chart = chartRef.value?.chart;
-  chart.setOption({ series: [{ zoom: zoom }] });
-};
 
 onMounted(async () => {
   // 获取图表数据
@@ -1042,6 +994,50 @@ onMounted(async () => {
   }
 });
 
+// 处理图标点击事件
+const handleIconClick = (icon) => {
+  console.log('点击了图标:', icon);
+  const chart = chartRef.value?.chart;
+
+  switch (icon) {
+    case 'download':
+      console.log('下载');
+      exportToPNG(chart);
+      break;
+    case 'search':
+      searchVisible.value = true
+      console.log('搜索');
+      break;
+    case 'add':
+      showCreateDialog.value = true
+      console.log('添加');
+      break;
+    case 'delete':
+      handleDelete();
+      console.log('删除');
+      break;
+    case 'connect':
+      handleConnect();
+      console.log('连接');
+      break;
+    case 'cancel':
+      console.log('取消');
+      break;
+    default:
+      console.log('未知图标');
+      break;
+  }
+}
+
+
+const sliderValue = ref(100); // 初始值 100% (1x)
+// 缩放事件处理
+const handleZoomChange = (zoom) => {
+  console.log('缩放事件', zoom);
+  const chart = chartRef.value?.chart;
+  chart.setOption({ series: [{ zoom: zoom }] });
+};
+
 // 获取节点信息
 const findNearestNode = (chart, point, threshold = 20) => {
   const series = chart.getModel().getSeries()[0];
@@ -1119,6 +1115,16 @@ const pointToLineDistance = (point, linePoint1, linePoint2) => {
     Math.pow(point[1] - projection[1], 2)
   );
 };
+
+
+// 关闭弹窗
+const closePopup = () => {
+  console.log('关闭弹窗');
+  isPopupVisible.value = false;
+  selectedNodeInfo.value = {};
+  contextMenuVisible.value = false
+};
+
 </script>
 
 <style scoped>
