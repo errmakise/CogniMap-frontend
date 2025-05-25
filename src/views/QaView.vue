@@ -27,7 +27,7 @@
                   <span>重命名</span>
                 </div>
               </el-dropdown-item>
-              <el-dropdown-item @click="deleteConversation(conv)">
+              <el-dropdown-item @click="deleteConversation(index)">
                 <div class="oprate-item">
                   <Delete />
                   <span>删除</span>
@@ -79,8 +79,6 @@
           </div>
 
 
-
-
         </div>
 
       </el-scrollbar>
@@ -105,9 +103,11 @@ import { ElMessage, ElMessageBox, ElLoading } from 'element-plus'
 import { MoreFilled } from '@element-plus/icons-vue'
 import {
   fetchQuestionsList, fetchQuestionDetail, renameQuestion
-  , deleteQuestion, createQuestion, updateQuestion,
+  , deleteQuestion, createQuestion, updateQuestion, createGraphNode
 } from '@/api'
+import { useVisitHistoryStore } from '@/stores/visitHistory'
 
+const visitHistory = useVisitHistoryStore()
 const conversations = ref([
 ])
 
@@ -211,16 +211,19 @@ const renameConversation = (index) => {
   })
 }
 
-const deleteConversation = (index) => {
+const deleteConversation = async (index) => {
   console.log("删除对话", index)
-  if (conversations.value.length <= 1) {
-    ElMessage.warning('至少保留一个对话')
-    return
+  try {
+    const res = await deleteQuestion(conversations.value[index].id)
+    console.log("删除成功", res)
+    conversations.value.splice(index, 1)
+    ElMessage.success('删除成功')
+    startNewConversation()
+  } catch (error) {
+    console.error('删除失败', error)
+    ElMessage.error('删除失败')
   }
-  conversations.value.splice(index, 1)
-  if (currentConversationIndex.value >= index) {
-    currentConversationIndex.value = Math.max(0, currentConversationIndex.value - 1)
-  }
+
 }
 
 // 创建新对话
@@ -360,11 +363,23 @@ const fileTreeData = ref([])
 const currentKnowledge = ref(null) // 存储当前要添加的知识点
 
 // 修改addKnowledgeNode方法
-const addKnowledgeNode =(knowledge) => {
+const addKnowledgeNode = (knowledge) => {
   console.log("添加知识点", knowledge)
+  const defaultGraph = localStorage.getItem('defaultGraph')
+
+  if (!defaultGraph || defaultGraph === 'recent') {
+    const recentGraphId = visitHistory.getRecentGraphVisited()
+    if (recentGraphId) {
+      createKnowledgeNodeInGraph(recentGraphId, knowledge)
+      return;
+    } else {
+      console.log("没有最近访问的图谱")
+    }
+  }
   currentKnowledge.value = knowledge
   fetchGraphFiles() // 获取图谱文件列表
   showFileDialog.value = true
+
 }
 
 // 获取图谱文件列表
@@ -415,7 +430,7 @@ const fetchGraphFiles = async () => {
       }
     ]
     fileTreeData.value = formatFileTree(response)
-      showFileDialog.value = true
+    showFileDialog.value = true
     console.log('图谱列表:', fileTreeData.value)
   } catch (error) {
     console.error('获取图谱列表失败:', error)
@@ -446,7 +461,7 @@ const formatFileTree = (files) => {
     const node = nodeMap[file.id]
     if (file.parentId && nodeMap[file.parentId]) {
       nodeMap[file.parentId].children.push(node)
-    }else{
+    } else {
       tree.push(node)
     }
   })
@@ -474,12 +489,14 @@ const createKnowledgeNodeInGraph = async (graphId, knowledge) => {
   });
 
   try {
-    await createGraphNode(graphId, {
+    console.log("创建知识节点", graphId, knowledge)
+    const res = await createGraphNode(graphId, {
       name: knowledge.point, // 使用知识点名称作为节点名
       description: knowledge.reason, // 使用推荐理由作为描述
       size: 10,
       color: "#000000"
     });
+    console.log("创建知识节点", res)
 
     ElMessage.success(`知识点"${knowledge.point}"已添加到图谱`);
   } catch (error) {
@@ -611,13 +628,14 @@ const createKnowledgeNodeInGraph = async (graphId, knowledge) => {
   flex: 1;
   display: flex;
   flex-direction: column;
-  padding: 20px;
+  padding: 20px 5px 20px 10px;
 }
 
 .messages-container {
   flex: 1;
   overflow-y: auto;
   margin-bottom: 20px;
+  padding-right: 15px;
 }
 
 .message {

@@ -81,8 +81,8 @@ const handleItemClick = (item) => {
     router.push({
       name: 'folder',
       params: { folderId: item.id },
-      force: true
-
+    }).then(()=>{
+      refreshFiles()
     })
 
 
@@ -113,7 +113,12 @@ const navigateTo = (index) => {
     router.push({ name: 'files' })
     return
   }
-  router.push(`/files/folder/${targetId}`)
+  router.push({
+      name: 'folder',
+      params: { folderId: targetId },
+    }).then(()=>{
+      refreshFiles()
+    })
 }
 
 const showUploadDialog = () => {
@@ -127,6 +132,12 @@ const openContainingFolder = (file) => {
 onMounted(() => {
   refreshFiles()
 })
+
+watch(() => route.params.folderId, (newVal) => {
+  if (newVal) {
+    refreshFiles()
+  }
+}, { immediate: true })
 </script>
 
 <style scoped>

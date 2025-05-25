@@ -1,8 +1,7 @@
 <template>
   <div class="bar-container">
     <div class="function-list">
-      <HoverClickItem :activeKey="activeItem" itemKey="account"
-      @clickItem="clickFunction">
+      <HoverClickItem :activeKey="activeItem" itemKey="account" @clickItem="clickFunction">
         <Account />
         <div class="function-name">账号</div>
       </HoverClickItem>
@@ -12,8 +11,7 @@
         <div class="function-name">问答</div>
       </HoverClickItem>
 
-      <HoverClickItem :activeKey="activeItem" itemKey="graph"
-      @clickItem="clickFunction">
+      <HoverClickItem :activeKey="activeItem" itemKey="graph" @clickItem="clickFunction">
         <Graph />
         <div class="function-name">图谱</div>
       </HoverClickItem>
@@ -26,8 +24,7 @@
 
     <el-scrollbar class="scrollbar">
       <div class="files-list">
-        <HoverClickItem v-for="item in visitHistory.history" :key="item.id"
-         :activeKey="activeItem" :itemKey="item.id"
+        <HoverClickItem v-for="item in visitHistory.history" :key="item.id" :activeKey="activeItem" :itemKey="item.id"
           @clickItem="openFile" :isFile="true" @clickFork="closeFile">
           <!-- 根据 fileType 动态渲染图标 -->
           <component :is="getFileIcon(item.type).component" :size="24" />
@@ -108,16 +105,19 @@ const router = useRouter();
 // 打开文件
 const openFile = (fileId) => {
   const file = visitHistory.history.find(item => item.id === fileId);
-  if (!file) return;
-
+  if (!file) {
+    console.log('文件不存在')
+    return;
+  }
+  visitHistory.addRecord(file);
 
   visitHistory.setActiveItem(fileId);
 
   // 根据文件类型跳转到不同页面
   if (file.type === 0) { // 知识图谱
-    router.push(`/graph/${file.id}`);
+    router.push(`/graph/${file.id}`)
   } else if (file.type === 1) { // Markdown文件
-    router.push(`/md/${file.id}`);
+    router.push(`/md/${file.id}`)
   }
 };
 
@@ -130,7 +130,7 @@ const closeFile = (fileId) => {
   if (activeItem.value === fileId) {
     console.log('当前打开的文件被删除，重置activeItem')
     visitHistory.setActiveItem('graph');
-    router.push({name:'files'})
+    router.push({ name: 'files' })
   }
 };
 
@@ -138,7 +138,7 @@ const closeFile = (fileId) => {
 const clearAllHistory = () => {
   visitHistory.clearAll();
   visitHistory.setActiveItem('graph');
-  router.push({name:'files'})
+  router.push({ name: 'files' })
 };
 
 
@@ -152,15 +152,15 @@ const clickFunction = (itemName) => {
   switch (itemName) {
     case 'account':
       console.log('点击 账号');
-      router.push({name:'account'})
+      router.push({ name: 'account' })
       break;
     case 'qa':
       console.log('点击 问答');
-      router.push({name:'qa'})
+      router.push({ name: 'qa' })
       break;
     case 'graph':
       console.log('点击 图谱');
-      router.push({name:'files'})
+      router.push({ name: 'files' })
       break;
     default:
       console.log('点击 未知');
@@ -209,7 +209,7 @@ const getFileIcon = (type) => {
   gap: 5px;
 }
 
-.name{
+.name {
   font-weight: 600;
   font-size: 16px;
 }

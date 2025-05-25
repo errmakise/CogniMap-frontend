@@ -33,8 +33,8 @@ const router = useRouter()
 const visitHistory = useVisitHistoryStore()
 
 const pagination = ref({
-  pageNo: 1,
-  pageSize: 10,
+  pageNo: 0,
+  pageSize: 0,
   total: 0
 })
 

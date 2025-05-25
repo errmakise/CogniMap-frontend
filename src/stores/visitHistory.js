@@ -27,6 +27,16 @@ export const useVisitHistoryStore = defineStore('visitHistory', () => {
       if (history.value.length > 10) {
         history.value.pop()
       }
+    }else{
+      console.log('历史已存在')
+      history.value=[{
+        id: record.id,
+        name: record.name,
+        //1  md，-1 文件夹，0 图谱
+        type: record.type,
+        time: new Date().toLocaleString()
+      },
+      ...history.value.filter(item => item.id !== record.id)]
     }
   }
   const removeRecord = (id) => {
@@ -43,5 +53,10 @@ export const useVisitHistoryStore = defineStore('visitHistory', () => {
       record.name = newName
     }
   }
-  return { history,activeItem, updateRecordName, addRecord,removeRecord, clearAll, setActiveItem }
+
+  const getRecentGraphVisited = () => {
+    const graphRecord = history.value.find(item => item.type === 0)
+    return graphRecord ? graphRecord.id : null
+  }
+  return { history,activeItem,getRecentGraphVisited, updateRecordName, addRecord,removeRecord, clearAll, setActiveItem }
 })

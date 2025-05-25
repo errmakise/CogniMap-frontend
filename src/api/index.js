@@ -47,7 +47,7 @@ export const uploadFile = (data) => {
 }
 
 // 文件管理API
-export const fetchFiles = (folderId = 0, pageNo = 1, pageSize = 10) =>
+export const fetchFiles = (folderId = 0, pageNo = 0, pageSize = 0) =>
   request.get(`/file/${folderId}`, {
     params: {
       pageNo,
@@ -87,7 +87,7 @@ export const createCopy = (id) => request.post(`/files/${id}/copy`)
 export const copyFile = (id, newPath) => request.post(`/files/${id}/copy`, { newPath })
 
 export const getFilePath = (id) => request.get(`/file/path/${id}`)
-export const fetchAllGraphs = (pageNo = 1, pageSize = 10) => request.get('/file/graph',{
+export const fetchAllGraphs = (pageNo = 0, pageSize = 0) => request.get('/file/graph',{
   params: {
     pageNo,
     pageSize,
@@ -102,7 +102,7 @@ export const fetchQuestionDetail = (id) => request.get(`/agent/${id}`)
 export const renameQuestion = (id, title) =>
   request.put(`/agent/${id}`, { title: title })
 export const deleteQuestion = (id) =>
-  request.delete(`/question/${id}`)
+  request.delete(`/agent/${id}`)
 export const createQuestion = () => request.post('/agent')
 export const updateQuestion = (id, question) => request.post(`/agent/${id}`, {question: question})
 

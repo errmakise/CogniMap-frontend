@@ -20,7 +20,9 @@
 
 
     <!-- 新建节点弹窗 -->
-    <el-dialog v-model="showCreateDialog" align-center width="30%">
+    <el-dialog v-model="showCreateDialog" align-center width="30%"
+    :before-close="handleCreateDialogClose"
+    >
       <el-form :model="newNodeForm" label-width="100px" label-position="left">
         <el-form-item label="名称" class="create-item" style="margin-bottom: 50px;">
           <el-input v-model="newNodeForm.name" placeholder="输入节点名称" class="create-input" maxlength="10" />
@@ -223,7 +225,7 @@ const fetchGraphData = async () => {
   } catch (error) {
     console.error('获取图谱数据失败', error)
     return { nodes: [], links: [] }
-  }finally {
+  } finally {
     loading.close();
   }
 }
@@ -402,9 +404,7 @@ const selectedNodeInfo = ref({
 });
 // 弹窗位置
 const popupPosition = ref([0, 0]);
-
-
-
+const route=useRoute()
 
 
 
@@ -417,21 +417,23 @@ const handleClickFile = (fileId) => {
 };
 
 const isEditMode = ref(false) // 区分是编辑还是创建
-const currentNodeId = ref(null) // 当前编辑的节点ID
+const currentNode = ref(null) // 当前编辑的节点ID
 // 编辑节点
 const handleClickEdit = () => {
   console.log('点击了编辑', selectedNodeInfo.value);
-  closePopup();
+
+
   showCreateDialog.value = true;
   isEditMode.value = true;
-  currentNodeId.value = selectedNodeInfo.value.id;
-  console.log('currentNodeId', currentNodeId.value);
+  currentNode.value = selectedNodeInfo.value;
+  console.log('currentNode', currentNode.value);
+  closePopup();
   newNodeForm.value = {
-    name: selectedNodeInfo.value.name,
-    description: selectedNodeInfo.value.description,
-    files: selectedNodeInfo.value.files
+    name: currentNode.value.name,
+    description: currentNode.value.description,
+    files: currentNode.value.files
   };
-  selectedFiles.value = selectedNodeInfo.value.files.map(file => ({
+  selectedFiles.value = currentNode.value.files.map(file => ({
     id: file.fileId,
     label: file.name
   }));
@@ -446,7 +448,7 @@ const createNewNode = async () => {
   });
   try {
     if (isEditMode.value) {
-      const res = await updateGraphNode(currentNodeId.value, {
+      const res = await updateGraphNode(currentNode.value.id, {
         name: newNodeForm.value.name,
         description: newNodeForm.value.description,
         fileId: selectedFiles.value.map(f => f.id),
@@ -456,9 +458,9 @@ const createNewNode = async () => {
         color: "#000000"
       })
       console.log('update操作成功:', res);
-      console.log('currentNodeId', currentNodeId.value);
+      console.log('currentNode', currentNode.value);
       // 更新现有节点数据
-      const nodeIndex = chatOptions.value.series[0].data.findIndex(n => n.id === currentNodeId.value);
+      const nodeIndex = chatOptions.value.series[0].data.findIndex(n => n.id === currentNode.value.id);
       console.log('nodeIndex', nodeIndex);
       if (nodeIndex !== -1) {
         chatOptions.value.series[0].data[nodeIndex] = {
@@ -506,7 +508,7 @@ const createNewNode = async () => {
     resetForm();
   } catch (error) {
     console.error('create操作失败:', error);
-  }finally {
+  } finally {
     loading.close();
   }
 }
@@ -525,10 +527,12 @@ const exportToPNG = async (chart) => {
     if (filePath) {
       addToDownloadHistory(filePath);
     }
+    ElMessage.success('导出成功');
   } catch (error) {
     console.error('导出PNG失败:', error);
   }
   console.log(downloadHistoryStore.history)
+
 };
 
 
@@ -540,7 +544,7 @@ const addToDownloadHistory = (filePath) => {
     time: new Date().toLocaleString(),
     dir: path.dirname(filePath)
   });
-  console.log('导出成功',downloadHistoryStore.history)
+  console.log('导出成功', downloadHistoryStore.history)
 };
 
 const showCreateDialog = ref(false)
@@ -610,7 +614,7 @@ const fetchUserFiles = async () => {
   } catch (error) {
     console.error('获取文件列表失败:', error)
     ElMessage.error('获取文件列表失败')
-  }finally {
+  } finally {
     loading.close();
   }
 }
@@ -626,7 +630,7 @@ const formatFileTree = (files) => {
       folderMap[file.id] = {
         id: file.id,
         label: file.name,
-        type:-1,
+        type: -1,
         children: []
       }
     }
@@ -639,13 +643,13 @@ const formatFileTree = (files) => {
         folderMap[file.parentId].children.push({
           id: file.id,
           label: file.name,
-          type:file.type
+          type: file.type
         })
       } else {
         tree.push({
           id: file.id,
           label: file.name,
-          type:file.type
+          type: file.type
         })
       }
     }
@@ -696,9 +700,12 @@ const resetForm = () => {
   selectedFiles.value = [];
   showCreateDialog.value = false;
   isEditMode.value = false;
-  currentNodeId.value = null;
+  currentNode.value = null;
 };
-
+const handleCreateDialogClose = (done) => {
+  resetForm()
+  done()
+}
 
 
 // const createNewNode = async () => {
@@ -819,7 +826,7 @@ const deleteConnection = async () => {
       offset: 80  // 保持位置一致
     });
     console.error('删除连线失败:', error);
-  }finally {
+  } finally {
     loading.close();
   }
 
@@ -829,10 +836,10 @@ const deleteConnection = async () => {
 const deleteNode = async () => {
   if (selectedNodeInfo.value.id) {
     const loading = ElLoading.service({
-    lock: true,
-    text: '加载中...',
-    background: 'rgba(0, 0, 0, 0.7)'
-  });
+      lock: true,
+      text: '加载中...',
+      background: 'rgba(0, 0, 0, 0.7)'
+    });
     try {
       const res = await deleteGraphNode(selectedNodeInfo.value.id)
       console.log('删除节点成功', res)
@@ -863,7 +870,7 @@ const deleteNode = async () => {
         offset: 80  // 保持位置一致
       });
       console.error('删除节点失败:', error);
-    }finally {
+    } finally {
       loading.close();
     }
   }
@@ -913,10 +920,7 @@ const handleConnect = () => {
 
 
 
-
-
-
-onMounted(async () => {
+const refreshGraph = async () => {
   // 获取图表数据
   const graphData = await fetchGraphData()
 
@@ -927,6 +931,13 @@ onMounted(async () => {
 
   console.log('chatOptions', chatOptions.value.series[0].links)
   console.log('chatOptions node', chatOptions.value.series[0].data)
+
+}
+
+
+onMounted(async () => {
+  refreshGraph();
+
   const chart = chartRef.value?.chart;
   if (chart) {
     chart.getZr().on('contextmenu', handleNodeRightClick)
@@ -1120,10 +1131,18 @@ const pointToLineDistance = (point, linePoint1, linePoint2) => {
 // 关闭弹窗
 const closePopup = () => {
   console.log('关闭弹窗');
-  isPopupVisible.value = false;
   selectedNodeInfo.value = {};
+  isPopupVisible.value = false;
   contextMenuVisible.value = false
 };
+
+// 添加路由监听
+watch(() => route.params.graphId, (newVal) => {
+  if (newVal) {
+    refreshGraph()
+  }
+}, { immediate: true })
+
 
 </script>
 

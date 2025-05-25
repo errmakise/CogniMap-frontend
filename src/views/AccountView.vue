@@ -21,7 +21,7 @@
     </div>
 
     <div class="section-card">
-      <div class="card-line" style="cursor: pointer;">
+      <div class="card-line" style="cursor: pointer;" @click="openBlogSetting">
         <span>博客监控设置</span>
         <div class="card-funtion">
           <RightArrow color="#9C9C9C" />
@@ -63,6 +63,39 @@
     </template>
   </el-dialog>
 
+  <!-- 博客监控设置对话框 -->
+  <el-dialog v-model="isBlogSettingOpen" class="setting-dialog" width="550px" :before-close="cancelEditing" align-center
+    :show-close="false">
+    <div class="setting-content">
+      <div class="setting-item">
+        <span>浏览博客时默认开启监控</span>
+        <el-checkbox v-model="settings.blogMonitoring" />
+      </div>
+
+
+      <div class="setting-item">
+        <span>自动在节点描述中关联博客超链接</span>
+        <el-checkbox v-model="settings.autoLinkBlog" />
+      </div>
+
+
+      <div class="setting-item">
+        <div>创建节点的默认图谱</div>
+        <el-radio-group v-model="settings.defaultGraph" text-color="#000000" fill="#E3E3E3">
+          <el-radio-button label="none">无</el-radio-button>
+          <el-radio-button label="recent">最近打开的</el-radio-button>
+        </el-radio-group>
+      </div>
+    </div>
+
+
+
+    <template #footer>
+      <el-button @click="closeBlogSetting" round color="#DBDBDB">取消</el-button>
+      <el-button type="primary" @click="saveBlogSetting" round color="#000000">保存</el-button>
+    </template>
+  </el-dialog>
+
 </template>
 
 <script setup>
@@ -71,6 +104,30 @@ import { useAuthStore } from '@/stores/auth'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { uploadImage, updateUserInfo } from '@/api'
+const isBlogSettingOpen = ref(false)
+const settings = ref({
+  blogMonitoring: localStorage.getItem('blogMonitoring') === 'true' || true,
+  autoLinkBlog: localStorage.getItem('autoLinkBlog') === 'true' || true,
+  defaultGraph: localStorage.getItem('defaultGraph') || 'recent'
+})
+
+const saveBlogSetting = () => {
+  localStorage.setItem('blogMonitoring', settings.value.blogMonitoring)
+  localStorage.setItem('autoLinkBlog', settings.value.autoLinkBlog)
+  localStorage.setItem('defaultGraph', settings.value.defaultGraph)
+  isBlogSettingOpen.value = false
+  console.log('保存博客设置', settings.value)
+  ElMessage.success('设置已保存')
+}
+const openBlogSetting = () => {
+  console.log('打开博客设置')
+  isBlogSettingOpen.value = true;
+}
+const closeBlogSetting = () => {
+  console.log('关闭博客设置')
+  isBlogSettingOpen.value = false;
+}
+
 const handleUpload = async (file) => {
   try {
     const res = await uploadImage(file)
@@ -184,6 +241,20 @@ const handleLogout = () => {
 
 
 <style scoped>
+.setting-content {
+  padding: 20px 15px;
+}
+
+.setting-item {
+  margin-bottom: 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  color: #000000;
+
+  font-size: 16px;
+}
+
 .section-card {
   width: 75%;
   background-color: rgb(237, 237, 237);
