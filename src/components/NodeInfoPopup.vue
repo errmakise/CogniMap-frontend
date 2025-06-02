@@ -27,8 +27,8 @@
 
     <div class="line main-font">{{ nodeInfo.description }}</div>
 
-    <div class="file-list" v-if="file">
-      <div class="file-item" @click="clickFile(file.fileId)" v-for="(file, index) in nodeInfo.files" :key="file.fileId">
+    <div class="file-list" v-if="nodeInfo.files.length>0">
+      <div class="file-item" @click="clickFile(file)" v-for="(file, index) in nodeInfo.files" :key="file.fileId">
         <span class="main-font file-name">{{ file.filename }}</span>
         <RightArrow />
       </div>
@@ -42,8 +42,8 @@
 import { ref, defineProps, defineEmits } from 'vue';
 const emit = defineEmits(['clickFile', 'clickEdit'])
 
-const clickFile = (fileId) => {
-  emit('clickFile', fileId)
+const clickFile = (file) => {
+  emit('clickFile', file)
 }
 const clickEdit = () => {
   emit('clickEdit')

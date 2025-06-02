@@ -104,20 +104,25 @@ import { useAuthStore } from '@/stores/auth'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { uploadImage, updateUserInfo } from '@/api'
+const authStore = useAuthStore()
 const isBlogSettingOpen = ref(false)
 const settings = ref({
-  blogMonitoring: localStorage.getItem('blogMonitoring') === 'true' || true,
-  autoLinkBlog: localStorage.getItem('autoLinkBlog') === 'true' || true,
+  blogMonitoring: false, // 默认值为 false
+  autoLinkBlog: false, // 默认值为 false
   defaultGraph: localStorage.getItem('defaultGraph') || 'recent'
 })
 
-const saveBlogSetting = () => {
-  localStorage.setItem('blogMonitoring', settings.value.blogMonitoring)
-  localStorage.setItem('autoLinkBlog', settings.value.autoLinkBlog)
-  localStorage.setItem('defaultGraph', settings.value.defaultGraph)
-  isBlogSettingOpen.value = false
-  console.log('保存博客设置', settings.value)
-  ElMessage.success('设置已保存')
+const saveBlogSetting = async () => {
+  try {
+    await authStore.updateUserSettings(settings.value.autoLinkBlog == true ? 1 : 0, settings.value.blogMonitoring == true ? 1 : 0)
+    localStorage.setItem('defaultGraph', settings.value.defaultGraph)
+    isBlogSettingOpen.value = false
+    console.log('保存博客设置', settings.value)
+    ElMessage.success('设置已保存')
+  } catch (error) {
+    ElMessage.error('保存失败')
+  }
+
 }
 const openBlogSetting = () => {
   console.log('打开博客设置')
@@ -138,7 +143,7 @@ const handleUpload = async (file) => {
   }
 }
 
-const authStore = useAuthStore()
+
 const router = useRouter()
 const isEditing = ref(false)
 const originalData = ref({})
@@ -168,6 +173,10 @@ const loadUserInfo = () => {
       avatar: authStore.userInfo.avatar || ''
     }
     originalData.value = { ...userForm.value }
+    settings.value.blogMonitoring = authStore.userInfo.settings.autoMonitor == 1? true : false;
+    settings.value.autoLinkBlog = authStore.userInfo.settings.autoNode == 1? true : false;
+    console.log('加载用户信息', authStore.userInfo)
+    console.log('加载用户信息set', settings.value)
   }
 }
 

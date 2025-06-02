@@ -92,7 +92,7 @@
 
     </div>
 
-    <FileSelectorDialog v-model="showFileDialog" title="选择关联文件" :file-tree-data="fileTreeData" :file-types="[1]"
+    <FileSelectorDialog v-model="showFileDialog" title="选择关联文件" :file-tree-data="fileTreeData" :file-types="[0]"
       @confirm="handleFileSelection" />
   </div>
 </template>
@@ -103,7 +103,7 @@ import { ElMessage, ElMessageBox, ElLoading } from 'element-plus'
 import { MoreFilled } from '@element-plus/icons-vue'
 import {
   fetchQuestionsList, fetchQuestionDetail, renameQuestion
-  , deleteQuestion, createQuestion, updateQuestion, createGraphNode
+  , deleteQuestion, getFileTree,createQuestion, updateQuestion, createGraphNode
 } from '@/api'
 import { useVisitHistoryStore } from '@/stores/visitHistory'
 
@@ -391,45 +391,45 @@ const fetchGraphFiles = async () => {
   });
 
   try {
-    //const response = await fetchGraphList() // 需要实现获取图谱列表的API
-    const response = [
-      {
-        id: '1',
-        name: '笔记目录',
-        type: -1, // -1表示文件夹
-        isFolder: true,
-        parentId: null
-      },
-      {
-        id: '2',
-        name: 'AI基础.md',
-        type: 1, // 1表示md文件
-        isFolder: false,
-        parentId: '1'
-      },
-      {
-        id: '3',
-        name: '知识图谱1',
-        isFolder: false,
-        type: 0, // 0表示图谱
-        parentId: '1'
-      },
-      {
-        id: '4',
-        name: '深度学习',
-        isFolder: true,
-        type: -1, // -1表示文件夹
-        parentId: '1'
-      },
-      {
-        id: '5',
-        isFolder: false,
-        name: '神经网络.md',
-        type: 1, // 1表示md文件
-        parentId: '4'
-      }
-    ]
-    fileTreeData.value = formatFileTree(response)
+    fileTreeData.value = await getFileTree() // 需要实现获取图谱列表的API
+    // const response = [
+    //   {
+    //     id: '1',
+    //     name: '笔记目录',
+    //     type: -1, // -1表示文件夹
+    //     isFolder: true,
+    //     parentId: null
+    //   },
+    //   {
+    //     id: '2',
+    //     name: 'AI基础.md',
+    //     type: 1, // 1表示md文件
+    //     isFolder: false,
+    //     parentId: '1'
+    //   },
+    //   {
+    //     id: '3',
+    //     name: '知识图谱1',
+    //     isFolder: false,
+    //     type: 0, // 0表示图谱
+    //     parentId: '1'
+    //   },
+    //   {
+    //     id: '4',
+    //     name: '深度学习',
+    //     isFolder: true,
+    //     type: -1, // -1表示文件夹
+    //     parentId: '1'
+    //   },
+    //   {
+    //     id: '5',
+    //     isFolder: false,
+    //     name: '神经网络.md',
+    //     type: 1, // 1表示md文件
+    //     parentId: '4'
+    //   }
+    // ]
+    // fileTreeData.value = formatFileTree(response)
     showFileDialog.value = true
     console.log('图谱列表:', fileTreeData.value)
   } catch (error) {

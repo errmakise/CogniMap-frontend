@@ -1,6 +1,7 @@
-import { deleteFile, deleteFolder, renameFile, renameFolder, moveFile, copyFile } from '@/api'
+import { deleteFile,moveFolder, deleteFolder, renameFile, renameFolder, moveFile, copyFile } from '@/api'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { useVisitHistoryStore } from '@/stores/visitHistory'
+
 
 export function useFileActions(currentFolderId, refreshFiles) {
   const visitHistory = useVisitHistoryStore()
@@ -34,24 +35,18 @@ export function useFileActions(currentFolderId, refreshFiles) {
     }
   }
 
-  const handleMove = async (file) => {
+  const handleMove = async (file,targetFolderId) => {
     try {
-      const { value: targetFolderId } = await ElMessageBox.prompt(
-        '请输入目标文件夹ID',
-        '移动文件',
-        {
-          confirmButtonText: '确定',
-          cancelButtonText: '取消',
-          inputPattern: /^\d+$/,
-          inputErrorMessage: '请输入有效的文件夹ID',
-        },
-      )
-
-      await moveFile(file.id, targetFolderId, file.name)
+      if (file.isFolder) {
+        await moveFolder(file.id, targetFolderId,file.name)
+      }else{
+        await moveFile(file.id, targetFolderId,file.name)
+      }
       ElMessage.success('移动成功')
       refreshFiles()
     } catch (error) {
       if (error !== 'cancel') {
+        console.error(error)
         ElMessage.error('移动失败')
       }
     }
@@ -80,11 +75,23 @@ export function useFileActions(currentFolderId, refreshFiles) {
 
   const handleCreateCopy = async (file) => {
     try {
-      await copyFile(file.id)
+      const { value: newName } = await ElMessageBox.prompt('请输入新名称', '重命名', {
+        confirmButtonText: '确定',
+        cancelButtonText: '取消',
+        inputPattern: /^.{1,50}$/,
+        inputErrorMessage: '名称长度应在1-50个字符之间',
+        inputValue: file.name,
+      })
+
+      await copyFile(file.id,newName)
       ElMessage.success('副本创建成功')
       refreshFiles()
     } catch (error) {
-      ElMessage.error('创建副本失败')
+      if (error!== 'cancel') {
+        ElMessage.error('创建副本失败')
+        console.error(error)
+      }
+
     }
   }
 

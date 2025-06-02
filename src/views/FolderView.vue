@@ -12,14 +12,16 @@
 
     <!-- 混合文件列表 -->
     <MixedFileList :items="allItems" @item-click="handleItemClick" @rename="handleRename" @delete="handleDelete"
-      @move="handleMove" @copy="handleCreateCopy" @open="openContainingFolder" />
+      @move="showMoveDialog" @copy="handleCreateCopy" @open="openContainingFolder" />
+    <FileSelectorDialog v-model="showFileDialog" title="选择关联文件" :file-tree-data="fileTreeData" :file-types="[-1]"
+      @confirm="handleFileSelection" />
   </div>
 </template>
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { fetchFiles, getFilePath } from '@/api'
+import { fetchFiles, getFilePath, getFileTree } from '@/api'
 import { ipcRenderer } from 'electron'
 import path from 'path'
 import { useFileOperations } from '@/composables/useFileOperations'
@@ -36,7 +38,8 @@ const currentFolderId = computed(() => route.params.folderId)
 const files = ref([])
 const uploadVisible = ref(false)
 const folderPath = ref([])
-
+const showFileDialog = ref(false)
+const fileTreeData = ref([])
 // 计算属性
 const allItems = computed(() => files.value)
 const breadcrumb = computed(() => folderPath.value || [])
@@ -75,13 +78,45 @@ const {
   handleCreateCopy
 } = useFileActions(currentFolderId, refreshFiles)
 
+
+const selectedFile = ref(null)
+const showMoveDialog = async (file) => {
+  const loading = ElLoading.service({
+    lock: true,
+    text: '加载中...',
+    background: 'rgba(0, 0, 0, 0.7)'
+  });
+  try {
+    fileTreeData.value = await getFileTree()
+
+  } catch (error) {
+    ElMessage.error('加载文件列表失败')
+  } finally {
+    showFileDialog.value = true
+    selectedFile.value = file
+    loading.close()
+  }
+}
+
+const handleFileSelection = async (files) => {
+  if (!files || files.length === 0) {
+    ElMessage.warning('请至少选择一个文件')
+    return
+  }
+  console.log('目标文件夹', files[0])
+  console.log('源文件', selectedFile.value)
+  await handleMove(selectedFile.value, files[0].id)
+  showFileDialog.value = false
+  selectedFile.value = null
+}
+
 const handleItemClick = (item) => {
   if (item.isFolder) {
     console.log('点击文件夹', item)
     router.push({
       name: 'folder',
       params: { folderId: item.id },
-    }).then(()=>{
+    }).then(() => {
       refreshFiles()
     })
 
@@ -114,11 +149,11 @@ const navigateTo = (index) => {
     return
   }
   router.push({
-      name: 'folder',
-      params: { folderId: targetId },
-    }).then(()=>{
-      refreshFiles()
-    })
+    name: 'folder',
+    params: { folderId: targetId },
+  }).then(() => {
+    refreshFiles()
+  })
 }
 
 const showUploadDialog = () => {

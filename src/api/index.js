@@ -24,16 +24,19 @@ export const resetPassword = (data) =>
   request.put('/user/password', { phone: data.phone, password: data.password })
 
 export const updateUserInfo = (data) => request.put('/user', data)
+export const getUserSettings = () => request.get('/blog/set')
+export const updateUserSettings = (autoNode, autoMonitor) =>
+  request.put('/blog/set', { autoNode, autoMonitor })
 
 // 图谱相关API
 export const fetchGraphNodes = (id) => request.get(`/graph/${id}/node`)
 export const updateGraphNode = (id, data) => request.put(`/graph/node/${id}`, data)
-export const createGraphNode = (id,data) => request.post(`/graph/${id}/node`, data)
+export const createGraphNode = (id, data) => request.post(`/graph/${id}/node`, data)
 export const deleteGraphNode = (id) => request.delete(`/graph/node/${id}`)
-export const createGraphLink = (id,data) => request.post(`/graph/${id}/relation`, data)
+export const createGraphLink = (id, data) => request.post(`/graph/${id}/relation`, data)
 export const deleteGraphLink = (id) => request.delete(`/graph/relation/${id}`)
 export const fetchGraphLinks = (id) => request.get(`/graph/${id}/relation`)
-export const fetchNodeDetails= (id) => request.get(`/graph/node/${id}`)
+export const fetchNodeDetails = (id) => request.get(`/graph/node/${id}`)
 
 // 文件相关API
 export const uploadFile = (data) => {
@@ -80,36 +83,44 @@ export const deleteFile = (id) => request.delete(`/file/file/${id}`)
 export const moveFile = (id, folderId, newName) =>
   request.put(`/file/file/${id}`, {
     name: newName,
-    folderId,
+    folderId: folderId,
+  })
+export const moveFolder = (id, folderId, newName) =>
+  request.put(`/file/folder/${id}`, {
+    name: newName,
+    folderId: folderId,
   })
 export const exportGraph = (id) => request.get(`/files/${id}/export`, { responseType: 'blob' })
-export const createCopy = (id) => request.post(`/files/${id}/copy`)
-export const copyFile = (id, newPath) => request.post(`/files/${id}/copy`, { newPath })
+
+
+
+export const copyFile = (id, name) =>
+  request({
+    url: `/file/copy?id=${id}&name=${encodeURIComponent(name)}`,
+    method: 'post'
+  })
 
 export const getFilePath = (id) => request.get(`/file/path/${id}`)
-export const fetchAllGraphs = (pageNo = 0, pageSize = 0) => request.get('/file/graph',{
-  params: {
-    pageNo,
-    pageSize,
-  },
-})
-
+export const fetchAllGraphs = (pageNo = 0, pageSize = 0) =>
+  request.get('/file/graph', {
+    params: {
+      pageNo,
+      pageSize,
+    },
+  })
+export const getFileTree = () => request.get(`/file/tree`)
 
 //问答相关API
-export const fetchQuestionsList = () =>
-  request.get('/agent')
+export const fetchQuestionsList = () => request.get('/agent')
 export const fetchQuestionDetail = (id) => request.get(`/agent/${id}`)
-export const renameQuestion = (id, title) =>
-  request.put(`/agent/${id}`, { title: title })
-export const deleteQuestion = (id) =>
-  request.delete(`/agent/${id}`)
+export const renameQuestion = (id, title) => request.put(`/agent/${id}`, { title: title })
+export const deleteQuestion = (id) => request.delete(`/agent/${id}`)
 export const createQuestion = () => request.post('/agent')
-export const updateQuestion = (id, question) => request.post(`/agent/${id}`, {question: question})
-
-
+export const updateQuestion = (id, question) => request.post(`/agent/${id}`, { question: question })
 
 export const fetchMdFile = (id) => request.get(`/file/file/${id}`)
-export const updateMdFile = (id, content,title) => request.post(`/file/file/${id}`,{
-  content,
-  title,
-})
+export const updateMdFile = (id, content, title) =>
+  request.post(`/file/file/${id}`, {
+    content,
+    title,
+  })

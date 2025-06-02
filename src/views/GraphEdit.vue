@@ -20,14 +20,12 @@
 
 
     <!-- 新建节点弹窗 -->
-    <el-dialog v-model="showCreateDialog" align-center width="30%"
-    :before-close="handleCreateDialogClose"
-    >
+    <el-dialog v-model="showCreateDialog" align-center width="30%" :before-close="handleCreateDialogClose">
       <el-form :model="newNodeForm" label-width="100px" label-position="left">
         <el-form-item label="名称" class="create-item" style="margin-bottom: 50px;">
           <el-input v-model="newNodeForm.name" placeholder="输入节点名称" class="create-input" maxlength="10" />
         </el-form-item>
-        <el-form-item label="描述11" class="create-item" style="margin-bottom: 50px;">
+        <el-form-item label="描述" class="create-item" style="margin-bottom: 50px;">
           <el-input v-model="newNodeForm.description" type="textarea" placeholder="输入节点描述" maxlength="50"
             show-word-limit="true" :autosize="{ minRows: 4, maxRows: 8 }" class="create-input" resize="none" />
         </el-form-item>
@@ -61,7 +59,7 @@
         <el-button type="primary" @click="showFileDialog = false">确定</el-button>
       </template>
     </el-dialog> -->
-    <el-dialog v-model="showFileDialog" title="选择关联文件" width="40%" top="20vh">
+    <!-- <el-dialog v-model="showFileDialog" title="选择关联文件" width="40%" top="20vh">
       <el-tree :data="fileTreeData" :props="{ label: 'label', children: 'children' }"
         :filter-node-method="filterFileNode" node-key="id" show-checkbox check-strictly :default-expand-all="true"
         @check-change="handleFileCheckChange" ref="fileTreeRef">
@@ -84,8 +82,10 @@
         <el-button @click="showFileDialog = false">取消</el-button>
         <el-button type="primary" @click="confirmFileSelection">确定</el-button>
       </template>
-    </el-dialog>
+    </el-dialog> -->
 
+    <FileSelectorDialog v-model="showFileDialog" title="选择关联文件" :file-tree-data="fileTreeData" :file-types="[1]"
+      @confirm="handleFileSelection" :multiple="true" />
 
     <!-- 右键菜单 -->
     <div v-if="contextMenuVisible" class="context-menu" :style="{
@@ -122,11 +122,16 @@ import {
   deleteGraphNode,
   createGraphLink,
   deleteGraphLink,
+  getFileTree,
   fetchNodeDetails
 } from '@/api'
 import { color } from 'echarts'
 import { create } from 'domain'
+import { useVisitHistoryStore } from '@/stores/visitHistory'
 
+
+const router = useRouter()
+const visitHistory = useVisitHistoryStore()
 
 const downloadHistoryStore = useDownloadHistoryStore()
 
@@ -170,65 +175,6 @@ const mockDataStore = ref({
 })
 
 
-const fetchGraphData = async () => {
-  // return {
-  //   nodes: mockDataStore.value.nodes.map(node => ({
-  //     ...node,
-  //     _detailLoaded: false,
-  //     _loading: false
-  //   })),
-  //   links: mockDataStore.value.links
-  // }
-
-
-  const graphData = { nodes: [], links: [] }
-  const loading = ElLoading.service({
-    lock: true,
-    text: '加载图谱信息中...',
-    background: 'rgba(0, 0, 0, 0.7)'
-  });
-  try {
-
-
-    const nodesRes = await fetchGraphNodes(props.graphId)
-    console.log('获取图谱node成功', nodesRes)
-
-
-
-    if (nodesRes.length > 0) {
-      graphData.nodes = nodesRes.map(node => ({
-        ...node,
-        createTime: formatDate(node.createTime),
-        updateTime: formatDate(node.updateTime),
-        description: node.description || '暂无描述',
-        files: node.fileId ? node.fileId.map((id, index) => ({
-          fileId: id,
-          filename: node.filename[index]
-        })) : [],
-        _detailLoaded: false,
-        _loading: false
-      }))
-    }
-
-    const linksRes = await fetchGraphLinks(props.graphId)
-    console.log('获取图谱link成功', linksRes)
-
-    if (linksRes.length > 0) {
-      graphData.links = linksRes.map(link => ({
-        source: String(link.node1), // 转换为字符串
-        target: String(link.node2),
-        id: link.id,
-        _loading: false
-      }))
-    }
-    return graphData
-  } catch (error) {
-    console.error('获取图谱数据失败', error)
-    return { nodes: [], links: [] }
-  } finally {
-    loading.close();
-  }
-}
 
 const formatDate = (dateString) => {
   if (!dateString) return ''
@@ -404,7 +350,7 @@ const selectedNodeInfo = ref({
 });
 // 弹窗位置
 const popupPosition = ref([0, 0]);
-const route=useRoute()
+const route = useRoute()
 
 
 
@@ -412,8 +358,15 @@ const route=useRoute()
 
 
 // 处理文件点击事件
-const handleClickFile = (fileId) => {
-  console.log('点击了文件:', fileId);
+const handleClickFile = (file) => {
+  console.log('点击了文件:', file);
+  visitHistory.addRecord({
+    id: file.fileId,
+    name: file.filename,
+    type: 1,
+  })
+  visitHistory.setActiveItem(file.fileId)
+  router.push(`/md/${file.fileId}`)
 };
 
 const isEditMode = ref(false) // 区分是编辑还是创建
@@ -435,7 +388,7 @@ const handleClickEdit = () => {
   };
   selectedFiles.value = currentNode.value.files.map(file => ({
     id: file.fileId,
-    label: file.name
+    label: file.filename
   }));
 };
 
@@ -447,23 +400,25 @@ const createNewNode = async () => {
     background: 'rgba(0, 0, 0, 0.7)'
   });
   try {
-    if (isEditMode.value) {
-      const res = await updateGraphNode(currentNode.value.id, {
-        name: newNodeForm.value.name,
-        description: newNodeForm.value.description,
-        fileId: selectedFiles.value.map(f => f.id),
-        filename: selectedFiles.value.map(f => f.label),
+    const nodedata = {
+      name: newNodeForm.value.name,
+      description: newNodeForm.value.description,
+      fileId: selectedFiles.value.map(f => f.id),
+      filename: selectedFiles.value.map(f => f.label),
 
-        size: 10,
-        color: "#000000"
-      })
+      size: 10,
+      color: "#000000"
+    }
+    console.log('保存的nodedata', nodedata)
+    if (isEditMode.value) {
+      const res = await updateGraphNode(currentNode.value.id, nodedata)
       console.log('update操作成功:', res);
       console.log('currentNode', currentNode.value);
       // 更新现有节点数据
       const nodeIndex = chatOptions.value.series[0].data.findIndex(n => n.id === currentNode.value.id);
       console.log('nodeIndex', nodeIndex);
       if (nodeIndex !== -1) {
-        chatOptions.value.series[0].data[nodeIndex] = {
+        const updatedNode = {
           ...chatOptions.value.series[0].data[nodeIndex],
 
           name: newNodeForm.value.name,
@@ -472,35 +427,40 @@ const createNewNode = async () => {
             filename: file.label,
             fileId: file.id
           }))
-        };
+        }
+        console.log('updatedNode', updatedNode);
+        chatOptions.value.series[0].data[nodeIndex] = updatedNode;
       }
     } else {
       // 调用创建节点API
       console.log(selectedFiles.value)
-      const newNode = await createGraphNode(props.graphId, {
-        name: newNodeForm.value.name,
-        description: newNodeForm.value.description,
-        // files: selectedFiles.value.map(file => ({
-        //   name: file.label,
-        //   fileId: file.id
-        // })),
-        fileId: selectedFiles.value.map(f => f.id),
-        filename: selectedFiles.value.map(f => f.label),
-
-        size: 10,
-        color: "#000000"
-      })
+      const newNode = await createGraphNode(props.graphId, nodedata)
       console.log('newNode', newNode)
       // 添加到图表数据
       chatOptions.value.series[0].data.push({
-        ...newNode,
+        createTime: formatDate(newNode.createTime),
+        updateTime: formatDate(newNode.updateTime),
+        description: newNode.description || '暂无描述',
+        files: newNode.fileId ? newNode.fileId.map((id, index) => ({
+          fileId: id,
+          filename: newNode.filename[index]
+        })) : [],
+
+        blogTitle: newNode.blogTitle,
+        blogUrls: newNode.blogUrls,
+        id: newNode.id,
+        name: newNode.name,
+        graphId: newNode.graphId,
+        color: newNode.color,
+        symbolSize: 10, //注意
         _detailLoaded: false,
         _loading: false,
-        symbolSize: 10, //注意
-        files: selectedFiles.value.map(file => ({
-          filename: file.label,
-          fileId: file.id
-        }))
+
+
+        // files: selectedFiles.value.map(file => ({
+        //   filename: file.label,
+        //   fileId: file.id
+        // }))
       });
     }
 
@@ -508,6 +468,7 @@ const createNewNode = async () => {
     resetForm();
   } catch (error) {
     console.error('create操作失败:', error);
+
   } finally {
     loading.close();
   }
@@ -575,6 +536,7 @@ const fileTreeData = ref([
 ])
 const selectedFiles = ref([])
 
+// 获取用户文件列表
 const fetchUserFiles = async () => {
   const loading = ElLoading.service({
     lock: true,
@@ -582,35 +544,35 @@ const fetchUserFiles = async () => {
     background: 'rgba(0, 0, 0, 0.7)'
   });
   try {
-    //const response = await fetchUserMarkdownFiles() // 需要实现的API
-    const response = [
-      {
-        id: '1',
-        name: '笔记目录',
-        isFolder: true,
-        parentId: null
-      },
-      {
-        id: '2',
-        name: 'AI基础.md',
-        isFolder: false,
-        parentId: '1'
-      },
-      {
-        id: '1-2',
-        name: '深度学习',
-        isFolder: true,
-        parentId: '1'
-      },
-      {
-        id: '1-2-1',
-        name: '神经网络.md',
-        isFolder: false,
-        parentId: '1-2'
-      }
+    fileTreeData.value = await getFileTree() // 需要实现的API
+    // const response = [
+    //   {
+    //     id: '1',
+    //     name: '笔记目录',
+    //     isFolder: true,
+    //     parentId: null
+    //   },
+    //   {
+    //     id: '2',
+    //     name: 'AI基础.md',
+    //     isFolder: false,
+    //     parentId: '1'
+    //   },
+    //   {
+    //     id: '1-2',
+    //     name: '深度学习',
+    //     isFolder: true,
+    //     parentId: '1'
+    //   },
+    //   {
+    //     id: '1-2-1',
+    //     name: '神经网络.md',
+    //     isFolder: false,
+    //     parentId: '1-2'
+    //   }
 
-    ]
-    fileTreeData.value = formatFileTree(response)
+    // ]
+    //fileTreeData.value = formatFileTree(response)
   } catch (error) {
     console.error('获取文件列表失败:', error)
     ElMessage.error('获取文件列表失败')
@@ -619,80 +581,44 @@ const fetchUserFiles = async () => {
   }
 }
 
-// 将扁平文件列表转换为树形结构
-const formatFileTree = (files) => {
-  const tree = []
-  const folderMap = {}
+// 处理文件选择
+const handleFileSelection = (files) => {
+  if (!files || files.length === 0) {
+    ElMessage.warning('请至少选择一个文件')
+    return
+  }
 
-  // 先处理文件夹
-  files.forEach(file => {
-    if (file.isFolder) {
-      folderMap[file.id] = {
-        id: file.id,
-        label: file.name,
-        type: -1,
-        children: []
-      }
-    }
-  })
 
-  // 处理文件
-  files.forEach(file => {
-    if (!file.isFolder) {
-      if (file.parentId && folderMap[file.parentId]) {
-        folderMap[file.parentId].children.push({
-          id: file.id,
-          label: file.name,
-          type: file.type
-        })
-      } else {
-        tree.push({
-          id: file.id,
-          label: file.name,
-          type: file.type
-        })
-      }
-    }
-  })
+  // 更新已选文件列表
+  selectedFiles.value = files.map(file => ({
+    id: file.id,
+    label: file.name,
+    type: file.type
+  }))
 
-  // 合并结果
-  Object.values(folderMap).forEach(folder => {
-    tree.push(folder)
-  })
-
-  return tree
+  showFileDialog.value = false
+  ElMessage.success(`已选择 ${files.length} 个文件`)
 }
+
+
 
 // 添加文件选择方法
-const chooseFile = () => {
-  fetchUserFiles()
-  showFileDialog.value = true
-}
-const fileTreeRef = ref(null)
-
-const confirmFileSelection = () => {
-  const checkedNodes = fileTreeRef.value.getCheckedNodes()
-  selectedFiles.value = checkedNodes
-    .filter(node => !node.children) // 只保留文件
-    .map(node => ({
-      id: node.id,
-      label: node.label
-    }))
-  showFileDialog.value = false
-}
-
-// 选择文件方法
-const handleFileSelect = (node) => {
-  if (!node.children) { // 只选择文件，不选择目录
-    // 检查是否已选择
-    const index = selectedFiles.value.findIndex(f => f.id === node.id)
-    if (index === -1) {
-      selectedFiles.value.push(node)
-    } else {
-      selectedFiles.value.splice(index, 1)
-    }
+const chooseFile = async () => {
+  const loading = ElLoading.service({
+    lock: true,
+    text: '加载文件列表中...',
+    background: 'rgba(0, 0, 0, 0.7)'
+  })
+  try {
+    await fetchUserFiles()
+    showFileDialog.value = true
+  } catch (error) {
+    ElMessage.error('加载文件列表失败')
+  } finally {
+    loading.close()
   }
 }
+
 
 // 重置表单状态
 const resetForm = () => {
@@ -919,7 +845,75 @@ const handleConnect = () => {
 }
 
 
+const fetchGraphData = async () => {
+  // return {
+  //   nodes: mockDataStore.value.nodes.map(node => ({
+  //     ...node,
+  //     _detailLoaded: false,
+  //     _loading: false
+  //   })),
+  //   links: mockDataStore.value.links
+  // }
 
+
+  const graphData = { nodes: [], links: [] }
+  const loading = ElLoading.service({
+    lock: true,
+    text: '加载图谱信息中...',
+    background: 'rgba(0, 0, 0, 0.7)'
+  });
+  try {
+
+
+    const nodesRes = await fetchGraphNodes(props.graphId)
+    console.log('获取图谱node成功', nodesRes)
+
+
+
+    if (nodesRes.length > 0) {
+      graphData.nodes = nodesRes.map(node => ({
+
+        createTime: formatDate(node.createTime),
+        updateTime: formatDate(node.updateTime),
+        description: node.description || '暂无描述',
+        files: node.fileId ? node.fileId.map((id, index) => ({
+          fileId: id,
+          filename: node.filename[index]
+        })) : [],
+
+        blogTitle: node.blogTitle,
+        blogUrls: node.blogUrls,
+        id: node.id,
+        name: node.name,
+        graphId: node.graphId,
+        color: node.color,
+        symbolSize: 10, //注意
+        _detailLoaded: false,
+        _loading: false,
+      }))
+    }
+
+    const linksRes = await fetchGraphLinks(props.graphId)
+    console.log('获取图谱link成功', linksRes)
+
+    if (linksRes.length > 0) {
+      graphData.links = linksRes.map(link => ({
+        source: String(link.node1), // 转换为字符串
+        target: String(link.node2),
+        id: link.id,
+        _loading: false
+      }))
+    }
+    return graphData
+  } catch (error) {
+    console.error('获取图谱数据失败', error)
+    return { nodes: [], links: [] }
+  } finally {
+    loading.close();
+  }
+}
+
+// 刷新图表数据
 const refreshGraph = async () => {
   // 获取图表数据
   const graphData = await fetchGraphData()

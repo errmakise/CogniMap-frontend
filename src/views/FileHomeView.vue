@@ -5,18 +5,20 @@
     <OperationToolbar @command="handleCreateCommand" @upload-click="showUploadDialog" />
 
 
-    <FileList :files="graphs" :folders="folderList" @file-click="handleFileClick"
-      @folder-click="handleFolderClick" @rename="handleRename" @delete="handleDelete" @move="handleMove"
-      @copy="handleCreateCopy" @open="openContainingFolder" />
+    <FileList :files="graphs" :folders="folderList" @file-click="handleFileClick" @folder-click="handleFolderClick"
+      @rename="handleRename" @delete="handleDelete" @move="showMoveDialog" @copy="handleCreateCopy"
+      @open="openContainingFolder" />
 
+    <FileSelectorDialog v-model="showFileDialog" title="选择关联文件" :file-tree-data="fileTreeData" :file-types="[-1]"
+      @confirm="handleFileSelection" />
   </div>
 </template>
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { fetchFiles,fetchAllGraphs } from '@/api'
-import { ElMessage, ElMessageBox,ElLoading } from 'element-plus'
+import { fetchFiles, fetchAllGraphs, getFileTree } from '@/api'
+import { ElMessage, ElMessageBox, ElLoading } from 'element-plus'
 import { ipcRenderer } from 'electron'
 import path from 'path'
 import { useFileOperations } from '@/composables/useFileOperations'
@@ -31,6 +33,10 @@ const uploadVisible = ref(false)
 const currentFolderId = ref(0)
 const router = useRouter()
 const visitHistory = useVisitHistoryStore()
+
+const showFileDialog = ref(false)
+const fileTreeData = ref([])
+
 
 const pagination = ref({
   pageNo: 0,
@@ -79,7 +85,7 @@ const refreshFiles = async () => {
     files.value = []
     graphs.value = []
     ElMessage.error('获取文件列表失败')
-  }finally {
+  } finally {
     loading.close()
   }
 
@@ -98,8 +104,38 @@ const {
   handleCreateCopy
 } = useFileActions(currentFolderId, refreshFiles)
 
+const selectedFile = ref(null)
+const showMoveDialog = async (file) => {
+  const loading = ElLoading.service({
+    lock: true,
+    text: '加载中...',
+    background: 'rgba(0, 0, 0, 0.7)'
+  });
+  try {
+    fileTreeData.value = await getFileTree()
 
-const { handleCreateCommand } = useFileOperations(currentFolderId,refreshFiles)
+  } catch (error) {
+    ElMessage.error('加载文件列表失败')
+  } finally {
+    showFileDialog.value = true
+    selectedFile.value = file
+    loading.close()
+  }
+}
+
+const handleFileSelection = async (files) => {
+  if (!files || files.length === 0) {
+    ElMessage.warning('请至少选择一个文件')
+    return
+  }
+  console.log('目标文件夹', files[0])
+  console.log('源文件', selectedFile.value)
+  await handleMove(selectedFile.value, files[0].id)
+  showFileDialog.value = false
+  selectedFile.value = null
+}
+
+const { handleCreateCommand } = useFileOperations(currentFolderId, refreshFiles)
 
 
 
@@ -125,7 +161,7 @@ const handleFileClick = (file) => {
     })
     visitHistory.setActiveItem(file.id)
     router.push(`/graph/${file.id}`)
-  }else if (file.type === 1) { // md
+  } else if (file.type === 1) { // md
     visitHistory.addRecord({
       id: file.id,
       name: file.name,

@@ -1,8 +1,12 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
-import { login as apiLogin, register as apiRegister,resetPassword
-  as apiResetPassword,
- } from '@/api'
+import {
+  login as apiLogin,
+  register as apiRegister,
+  resetPassword as apiResetPassword,
+  getUserSettings,
+  updateUserSettings as apiUpdateUserSettings,
+} from '@/api'
 
 export const useAuthStore = defineStore('auth', () => {
   const token = ref(localStorage.getItem('token'))
@@ -17,13 +21,20 @@ export const useAuthStore = defineStore('auth', () => {
         password: credentials.password,
       })
       token.value = res.token
+
+      localStorage.setItem('token', res.token)
+      const res2 = await getUserSettings()
+      console.log('获取用户设置', res2)
       userInfo.value = {
         phone: credentials.phone,
         userId: res.userId,
         username: res.username,
         avatar: res.avatar,
+        settings: {
+          autoNode: res2.autoNode,
+          autoMonitor: res2.autoMonitor,
+        },
       }
-      localStorage.setItem('token', res.token)
       localStorage.setItem('userInfo', JSON.stringify(userInfo.value))
       console.log('登录成功', res)
     } catch (error) {
@@ -55,7 +66,7 @@ export const useAuthStore = defineStore('auth', () => {
     try {
       const res = await apiResetPassword({
         phone: data.phone,
-        password:data.password
+        password: data.password,
       })
       console.log('重置密码成功', res)
       return res
@@ -75,6 +86,20 @@ export const useAuthStore = defineStore('auth', () => {
     isLoginMode.value = !isLoginMode.value
   }
 
+  const updateUserSettings = async (autoNode, autoMonitor) => {
+    try {
+      const res = await apiUpdateUserSettings(autoNode, autoMonitor)
+      userInfo.value.settings = {
+        autoNode: autoNode,
+        autoMonitor: autoMonitor,
+      }
+      console.log('更新用户设置成功', res)
+      return res
+    } catch (error) {
+      throw error
+    }
+  }
+
   return {
     token,
     userInfo,
@@ -83,6 +108,7 @@ export const useAuthStore = defineStore('auth', () => {
     register,
     logout,
     switchMode,
-    resetPassword
+    resetPassword,
+    updateUserSettings,
   }
 })
