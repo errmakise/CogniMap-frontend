@@ -7,12 +7,13 @@ import '@/assets/styles/global.css'
 
 import Sidebar from './components/Sidebar.vue'
 
+const route=useRoute()
 const authStore = useAuthStore()
 </script>
 
 <template>
   <div class="app-container">
-    <Sidebar v-if="authStore.token" />
+    <Sidebar v-if="authStore.token && route.path !== '/auth'" />
     <div class="body" :class="{ 'full-width': !authStore.token }">
       <RouterView />
     </div>

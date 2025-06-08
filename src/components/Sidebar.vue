@@ -189,7 +189,16 @@ const fileIconConfig = {
 const getFileIcon = (type) => {
   return fileIconConfig[type] || MdFile;
 };
-
+const route = useRoute();
+watch(() => route.name, (newRouteName) => {
+  if (newRouteName === 'files' || newRouteName === 'graph-edit' || newRouteName === 'folder') {
+    visitHistory.setActiveItem('graph')
+  } else if (newRouteName === 'qa') {
+    visitHistory.setActiveItem('qa')
+  } else if (newRouteName === 'account') {
+    visitHistory.setActiveItem('account')
+  }
+}, { immediate: true })
 </script>
 
 <style scoped>

@@ -26,7 +26,7 @@
           <el-input v-model="newNodeForm.name" placeholder="输入节点名称" class="create-input" maxlength="10" />
         </el-form-item>
         <el-form-item label="描述" class="create-item" style="margin-bottom: 50px;">
-          <el-input v-model="newNodeForm.description" type="textarea" placeholder="输入节点描述" maxlength="50"
+          <el-input v-model="newNodeForm.description" type="textarea" placeholder="输入节点描述" maxlength="80"
             show-word-limit="true" :autosize="{ minRows: 4, maxRows: 8 }" class="create-input" resize="none" />
         </el-form-item>
 

@@ -63,7 +63,7 @@ import { ref, computed } from 'vue'
 import { useAuthStore } from '@/stores/auth'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-
+import { ElLoading } from 'element-plus'
 const authStore = useAuthStore()
 const router = useRouter()
 const isLoginMode = computed(() => authStore.isLoginMode)
@@ -98,6 +98,11 @@ const rules = {
 }
 
 const submitForm = async () => {
+  const loading = ElLoading.service({
+    lock: true,
+    text: '加载中...',
+    background: 'rgba(0, 0, 0, 0.7)'
+  });
   try {
     // 先校验表单
     await authForm.value.validate()
@@ -123,6 +128,8 @@ const submitForm = async () => {
     // if(error.message){
     //   ElMessage.error(error.message)
     // }
+  }finally{
+    loading.close()
   }
 }
 

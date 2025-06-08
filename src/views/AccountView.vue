@@ -22,7 +22,7 @@
 
     <div class="section-card">
       <div class="card-line" style="cursor: pointer;" @click="openBlogSetting">
-        <span>博客监控设置</span>
+        <span>设置</span>
         <div class="card-funtion">
           <RightArrow color="#9C9C9C" />
         </div>

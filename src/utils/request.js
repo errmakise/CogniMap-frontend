@@ -6,7 +6,7 @@ import { useAuthStore } from '@/stores/auth'
 // 创建axios实例
 const service = axios.create({
   baseURL: '/api',
-  timeout: 10000
+  timeout: 100000
 })
 
 // 请求拦截器

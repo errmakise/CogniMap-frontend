@@ -19,7 +19,6 @@ export function useFileActions(currentFolderId, refreshFiles) {
         const res = await renameFolder(file.id, newName, currentFolderId.value)
         console.log('重命名文件夹成功', res)
       } else {
-        //await renameFile(file.id, newName, file.folderId)//待定，当前还没实现“获取所有图谱文件”这个api
         const res = await renameFile(file.id, newName, currentFolderId.value)
         visitHistory.updateRecordName(file.id, newName)
         console.log('重命名文件成功', res)
